@@ -44,9 +44,10 @@ function ModuleImagesPanel() {
       if (upErr) { toast('Upload failed: ' + upErr.message); return }
       const { data: urlData } = sb.storage.from('project-files').getPublicUrl(path)
       const url = urlData.publicUrl
-      await sb.from('settings').upsert({ key: def.settingsKey, value: url }, { onConflict: 'key' })
+      const { error: saveErr } = await sb.from('settings').upsert({ key: def.settingsKey, value: url }, { onConflict: 'key' })
+      if (saveErr) { toast('Image uploaded but save failed: ' + saveErr.message + ' — run fix_settings_rls.sql in Supabase.'); return }
       setImages(prev => ({ ...prev, [def.settingsKey]: url }))
-      toast(`${def.label} image updated. Reload dashboard to see it.`)
+      toast(`${def.label} image saved.`)
     } finally {
       setUploading(null)
       if (fileRefs.current[def.key]) fileRefs.current[def.key].value = ''
