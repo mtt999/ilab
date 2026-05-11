@@ -3,6 +3,7 @@ import { sb } from '../../lib/supabase'
 import { useAppStore } from '../../store/useAppStore'
 import Modal from '../../components/Modal'
 import { hashPassword } from '../../lib/crypto'
+import { ALL_MODULES_META } from '../../components/DashboardIconPicker'
 
 // Super admin: session.userId === null (logged in via /admin password)
 // Org admin:   session.userId !== null && session.role === 'admin'
@@ -168,16 +169,10 @@ function OrgModal({ org, onClose, onSaved }) {
 }
 
 // ── Screen access modal ───────────────────────────────────────
-const ALL_SCREENS = [
-  { key: 'home',        label: 'Lab Stock' },
-  { key: 'equipmenthub', label: 'Equipment Hub' },
-  { key: 'equipment',  label: 'Equipment Inventory' },
-  { key: 'booking',    label: 'Equipment Booking' },
-  { key: 'projects',   label: 'Projects & Materials' },
-  { key: 'remessages', label: 'RE Messages' },
-  { key: 'training',   label: 'Training Records' },
-  { key: 'history',    label: 'Inspection History' },
-]
+// Derived from dashboard module list — team only, no external links, no profile
+const ALL_SCREENS = ALL_MODULES_META
+  .filter(m => m.roles.includes('team') && m.screen && !m.external && m.key !== 'profile')
+  .map(m => ({ key: m.screen, label: m.label, icon: m.icon }))
 
 function AccessModal({ user, onClose, onSaved }) {
   const { toast } = useAppStore()
@@ -220,6 +215,7 @@ function AccessModal({ user, onClose, onSaved }) {
           {ALL_SCREENS.map(s => (
             <label key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '10px 14px', borderRadius: 8, border: `1.5px solid ${granted.has(s.key) ? 'var(--accent)' : 'var(--border)'}`, background: granted.has(s.key) ? 'var(--accent-light)' : 'var(--surface)' }}>
               <input type="checkbox" checked={granted.has(s.key)} onChange={() => toggle(s.key)} style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
+              <span style={{ fontSize: 18, lineHeight: 1 }}>{s.icon}</span>
               <span style={{ fontSize: 14, fontWeight: 500 }}>{s.label}</span>
             </label>
           ))}
