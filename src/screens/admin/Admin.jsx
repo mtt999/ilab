@@ -117,12 +117,12 @@ function ModuleImagesPanel() {
 // Org admin:   session.userId !== null && session.role === 'admin'
 
 // ── User modal ────────────────────────────────────────────────
-function UserModal({ user, orgs, defaultOrgId, isSuperAdmin, onClose, onSaved }) {
+function UserModal({ user, orgs, defaultOrgId, isSuperAdmin, defaultRole, onClose, onSaved }) {
   const { toast } = useAppStore()
   const [name, setName]         = useState(user?.name || '')
   const [email, setEmail]       = useState(user?.email || '')
   const [password, setPassword] = useState('')
-  const [role, setRole]         = useState(user?.role || 'user')
+  const [role, setRole]         = useState(user?.role || defaultRole || 'user')
   const [orgId, setOrgId]       = useState(user?.organization_id || defaultOrgId || '')
   const [copied, setCopied]     = useState(false)
   const [savedCreds, setSavedCreds] = useState(null)
@@ -345,26 +345,26 @@ export default function Admin() {
   const isSuperAdmin = !session?.userId   // logged in via /admin password
   const myOrgId = session?.organizationId || null
 
-  const [tab, setTab]         = useState('users')
+  const [tab, setTab]         = useState(isSuperAdmin ? 'orgadmins' : 'users')
   const [users, setUsers]     = useState([])
   const [orgs, setOrgs]       = useState([])
   const [orgCounts, setOrgCounts] = useState({})
   const [search, setSearch]   = useState('')
-  const [orgFilter, setOrgFilter] = useState(isSuperAdmin ? '' : myOrgId)
+  const [orgFilter, setOrgFilter] = useState('')
   const [loading, setLoading] = useState(false)
 
   const [userModal, setUserModal]     = useState(null)
   const [orgModal, setOrgModal]       = useState(null)
   const [accessModal, setAccessModal] = useState(null)
 
-  const tabs = [
-    { key: 'users', label: 'Users' },
-    { key: 'students', label: 'Lab Users' },
-    ...(isSuperAdmin ? [{ key: 'organizations', label: 'Organizations' }] : [{ key: 'images', label: 'Module Images' }]),
-  ]
+  const tabs = isSuperAdmin
+    ? [{ key: 'orgadmins', label: 'Org Admins' }, { key: 'organizations', label: 'Organizations' }]
+    : [{ key: 'users', label: 'Users' }, { key: 'students', label: 'Lab Users' }, { key: 'images', label: 'Module Images' }]
 
   useEffect(() => { loadOrgs() }, [])
-  useEffect(() => { if (tab === 'users' || tab === 'students') loadUsers() }, [tab, orgFilter])
+  useEffect(() => {
+    if (tab === 'users' || tab === 'students' || tab === 'orgadmins') loadUsers()
+  }, [tab, orgFilter])
 
   async function loadOrgs() {
     const [{ data: orgData }, { data: countData }] = await Promise.all([
@@ -379,17 +379,17 @@ export default function Admin() {
 
   async function loadUsers() {
     setLoading(true)
-    const roleFilter = tab === 'students' ? 'student' : ['user', 'admin']
     let q = sb.from('users').select('*').order('name')
-    if (tab === 'students') q = q.eq('role', 'student')
-    else q = q.in('role', ['user', 'admin'])
-
-    if (!isSuperAdmin) {
+    if (isSuperAdmin) {
+      // Super admin only sees org admins across all orgs
+      q = q.eq('role', 'admin')
+      if (orgFilter) q = q.eq('organization_id', orgFilter)
+    } else {
+      // Org admin sees their own org's users
+      if (tab === 'students') q = q.eq('role', 'student')
+      else q = q.in('role', ['user', 'admin'])
       q = q.eq('organization_id', myOrgId)
-    } else if (orgFilter) {
-      q = q.eq('organization_id', orgFilter)
     }
-
     const { data } = await q
     setUsers(data || [])
     setLoading(false)
@@ -444,22 +444,58 @@ export default function Admin() {
         ))}
       </div>
 
-      {/* ── USERS / STUDENTS ── */}
-      {(tab === 'users' || tab === 'students') && (
+      {/* ── ORG ADMINS (super admin only) ── */}
+      {isSuperAdmin && tab === 'orgadmins' && (
         <div>
           <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email…" style={{ flex: 1, minWidth: 180 }} />
-            {isSuperAdmin && (
-              <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)} style={{ width: 'auto', minWidth: 140 }}>
-                <option value="">All organizations</option>
-                {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-              </select>
-            )}
+            <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)} style={{ width: 'auto', minWidth: 140 }}>
+              <option value="">All organizations</option>
+              {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+            <button className="btn btn-primary btn-sm" onClick={() => setUserModal('add')}>+ Add org admin</button>
+          </div>
+          {loading ? (
+            <div className="empty-state"><div className="spinner" style={{ margin: '0 auto' }} /></div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="empty-state"><div className="empty-icon">👤</div>No org admins found.</div>
+          ) : (
+            filteredUsers.map(u => (
+              <div key={u.id} className="card" style={{ padding: '12px 18px', marginBottom: 10, opacity: u.is_active ? 1 : 0.55 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontWeight: 600 }}>{u.name}</span>
+                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: '#FEF3C7', color: '#92400E', fontWeight: 600 }}>Org Admin</span>
+                      {!u.is_active && <span style={{ fontSize: 11, color: 'var(--accent2)', fontWeight: 500 }}>Inactive</span>}
+                      {u.must_change_password && <span style={{ fontSize: 11, color: '#D97706', fontWeight: 500 }}>⚠ Temp password</span>}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 3, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      {u.email && <span>{u.email}</span>}
+                      {u.organization_id && <span>· {orgName(u.organization_id)}</span>}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <button className="btn btn-sm" onClick={() => setUserModal(u)}>Edit</button>
+                    <button className="btn btn-sm" onClick={() => deactivateUser(u)}>{u.is_active ? 'Deactivate' : 'Activate'}</button>
+                    <button className="btn btn-sm btn-danger" onClick={() => deleteUser(u.id)}>Delete</button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* ── USERS / STUDENTS (org admin only) ── */}
+      {!isSuperAdmin && (tab === 'users' || tab === 'students') && (
+        <div>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email…" style={{ flex: 1, minWidth: 180 }} />
             <button className="btn btn-primary btn-sm" onClick={() => setUserModal('add')}>
               + Add {tab === 'students' ? 'lab user' : 'lab manager'}
             </button>
           </div>
-
           {loading ? (
             <div className="empty-state"><div className="spinner" style={{ margin: '0 auto' }} /></div>
           ) : filteredUsers.length === 0 ? (
@@ -477,19 +513,14 @@ export default function Admin() {
                       {!u.is_active && <span style={{ fontSize: 11, color: 'var(--accent2)', fontWeight: 500 }}>Inactive</span>}
                       {u.must_change_password && <span style={{ fontSize: 11, color: '#D97706', fontWeight: 500 }}>⚠ Temp password</span>}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 3, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 3 }}>
                       {u.email && <span>{u.email}</span>}
-                      {isSuperAdmin && u.organization_id && <span>· {orgName(u.organization_id)}</span>}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {tab === 'users' && (
-                      <button className="btn btn-sm" onClick={() => setAccessModal(u)}>Access</button>
-                    )}
+                    {tab === 'users' && <button className="btn btn-sm" onClick={() => setAccessModal(u)}>Access</button>}
                     <button className="btn btn-sm" onClick={() => setUserModal(u)}>Edit</button>
-                    <button className="btn btn-sm" onClick={() => deactivateUser(u)}>
-                      {u.is_active ? 'Deactivate' : 'Activate'}
-                    </button>
+                    <button className="btn btn-sm" onClick={() => deactivateUser(u)}>{u.is_active ? 'Deactivate' : 'Activate'}</button>
                     <button className="btn btn-sm btn-danger" onClick={() => deleteUser(u.id)}>Delete</button>
                   </div>
                 </div>
@@ -539,6 +570,7 @@ export default function Admin() {
           orgs={orgs}
           defaultOrgId={isSuperAdmin ? orgFilter : myOrgId}
           isSuperAdmin={isSuperAdmin}
+          defaultRole={isSuperAdmin ? 'admin' : 'user'}
           onClose={() => setUserModal(null)}
           onSaved={loadUsers}
         />
