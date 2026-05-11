@@ -398,7 +398,7 @@ function TaskModal({ task, onClose, onUpdate, onDelete, currentUserId, currentUs
   )
 }
 
-function Overview({ userId, isOwnerAdmin, isSolo }) {
+function Overview({ userId, isOwnerAdmin, isSolo, orgId }) {
   const [tasks, setTasks] = useState([])
   const [staffMap, setStaffMap] = useState({})
   const [loading, setLoading] = useState(true)
@@ -406,6 +406,7 @@ function Overview({ userId, isOwnerAdmin, isSolo }) {
 
   useEffect(() => {
     let q = sb.from('tasks').select('*').eq('login_mode', isSolo ? 'solo' : 'team')
+    if (!isSolo && orgId) q = q.eq('organization_id', orgId)
     if (!isOwnerAdmin && userId) q = q.or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
     const staffQ = isSolo ? Promise.resolve({ data: [] }) : sb.from('users').select('id, name').eq('is_active', true)
     Promise.all([q, staffQ])
@@ -414,7 +415,7 @@ function Overview({ userId, isOwnerAdmin, isSolo }) {
         const map = {}; (u || []).forEach(x => { map[x.id] = x.name })
         setStaffMap(map); setLoading(false)
       })
-  }, [userId, isOwnerAdmin, isSolo])
+  }, [userId, isOwnerAdmin, isSolo, orgId])
 
   const today = new Date(); today.setHours(0, 0, 0, 0)
   const in7 = new Date(today); in7.setDate(today.getDate() + 7)
@@ -546,7 +547,7 @@ function Overview({ userId, isOwnerAdmin, isSolo }) {
   )
 }
 
-function CalendarView({ onTaskClick, userId, isOwnerAdmin, isSolo }) {
+function CalendarView({ onTaskClick, userId, isOwnerAdmin, isSolo, orgId }) {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState('')
@@ -555,9 +556,10 @@ function CalendarView({ onTaskClick, userId, isOwnerAdmin, isSolo }) {
 
   useEffect(() => {
     let q = sb.from('tasks').select('*').eq('login_mode', isSolo ? 'solo' : 'team')
+    if (!isSolo && orgId) q = q.eq('organization_id', orgId)
     if (!isOwnerAdmin && userId) q = q.or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
     q.then(({ data: t }) => { setTasks(t || []); setLoading(false) })
-  }, [userId, isOwnerAdmin, isSolo])
+  }, [userId, isOwnerAdmin, isSolo, orgId])
 
   const now = new Date()
   const lastMonth = { year: now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear(), month: now.getMonth() === 0 ? 11 : now.getMonth() - 1 }
@@ -668,7 +670,7 @@ function CalendarView({ onTaskClick, userId, isOwnerAdmin, isSolo }) {
   )
 }
 
-function MyTasks({ userId, isAdmin, isOwnerAdmin, userName, isSolo, pendingTask, onPendingTaskConsumed }) {
+function MyTasks({ userId, isAdmin, isOwnerAdmin, userName, isSolo, orgId, pendingTask, onPendingTaskConsumed }) {
   const [tasks, setTasks] = useState([])
   const [staffMap, setStaffMap] = useState({})
   const [loading, setLoading] = useState(true)
@@ -695,6 +697,7 @@ function MyTasks({ userId, isAdmin, isOwnerAdmin, userName, isSolo, pendingTask,
   async function load() {
     try {
       let query = sb.from('tasks').select('*').eq('login_mode', isSolo ? 'solo' : 'team').order('deadline', { ascending: true, nullsFirst: false })
+      if (!isSolo && orgId) query = query.eq('organization_id', orgId)
       if (!isOwnerAdmin && userId) query = query.or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
       const usersQ = isSolo ? Promise.resolve({ data: [] }) : sb.from('users').select('id, name').eq('is_active', true)
       const [{ data, error }, { data: users }] = await Promise.all([query, usersQ])
@@ -743,7 +746,7 @@ function MyTasks({ userId, isAdmin, isOwnerAdmin, userName, isSolo, pendingTask,
     if (!newTask.title.trim()) { toast('Please enter a task title.'); return }
     setSaving(true)
     try {
-      const payload = { title: newTask.title, start_date: newTask.start_date || null, start_time: newTask.start_time || null, deadline: newTask.deadline || null, deadline_time: newTask.deadline_time || null, notes: newTask.notes || '', status: 'todo', progress: 0, is_meeting_task: false, priority: newTask.priority || 'medium', is_private: newTask.is_private || false, login_mode: isSolo ? 'solo' : 'team' }
+      const payload = { title: newTask.title, start_date: newTask.start_date || null, start_time: newTask.start_time || null, deadline: newTask.deadline || null, deadline_time: newTask.deadline_time || null, notes: newTask.notes || '', status: 'todo', progress: 0, is_meeting_task: false, priority: newTask.priority || 'medium', is_private: newTask.is_private || false, login_mode: isSolo ? 'solo' : 'team', organization_id: !isSolo ? (orgId || null) : null }
       if (userId) { payload.assigned_to = userId; payload.created_by = userId }
       const { data, error } = await sb.from('tasks').insert(payload).select().single()
       if (error) throw error
@@ -1571,6 +1574,7 @@ export default function PM() {
   const isAdmin = session?.role === 'admin' || session?.role === 'user'
   const userName = session?.username || 'Staff'
   const isSolo = session?.loginMode === 'solo'
+  const orgId = session?.organizationId || null
   const tabs = [
     { key: 'overview',  label: 'Overview' },
     { key: 'tasks',     label: 'My Tasks' },
@@ -1595,10 +1599,10 @@ export default function PM() {
           </button>
         ))}
       </div>
-      {activeTab === 'overview'  && <Overview userId={userId} isOwnerAdmin={isOwnerAdmin} isSolo={isSolo} />}
-      {activeTab === 'tasks'     && <MyTasks userId={userId} isAdmin={isAdmin} isOwnerAdmin={isOwnerAdmin} userName={userName} isSolo={isSolo} pendingTask={pendingTask} onPendingTaskConsumed={() => setPendingTask(null)} />}
+      {activeTab === 'overview'  && <Overview userId={userId} isOwnerAdmin={isOwnerAdmin} isSolo={isSolo} orgId={orgId} />}
+      {activeTab === 'tasks'     && <MyTasks userId={userId} isAdmin={isAdmin} isOwnerAdmin={isOwnerAdmin} userName={userName} isSolo={isSolo} orgId={orgId} pendingTask={pendingTask} onPendingTaskConsumed={() => setPendingTask(null)} />}
       {activeTab === 'team'      && <Team />}
-      {activeTab === 'calendar'  && <CalendarView userId={userId} isOwnerAdmin={isOwnerAdmin} isSolo={isSolo} onTaskClick={task => { setPendingTask(task); setActiveTab('tasks') }} />}
+      {activeTab === 'calendar'  && <CalendarView userId={userId} isOwnerAdmin={isOwnerAdmin} isSolo={isSolo} orgId={orgId} onTaskClick={task => { setPendingTask(task); setActiveTab('tasks') }} />}
       {activeTab === 'meetings'  && <Meetings userId={userId} isAdmin={isAdmin} userName={userName} />}
       {activeTab === 'chat'      && <Chat userId={userId} />}
       {activeTab === 'reminder'  && <Reminders userId={userId} />}

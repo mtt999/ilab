@@ -31,13 +31,16 @@ export const useAppStore = create((set, get) => ({
   settings: {},
 
   refreshCache: async () => {
-    const isSolo = get().session?.loginMode === 'solo'
+    const session = get().session
+    const isSolo = session?.loginMode === 'solo'
     const mode = isSolo ? 'solo' : 'team'
-    const [r, s, cfg] = await Promise.all([
-      sb.from('rooms').select('*').eq('login_mode', mode).order('created_at'),
-      sb.from('supplies').select('*').eq('login_mode', mode).order('created_at'),
-      sb.from('settings').select('*'),
-    ])
+    let roomsQ = sb.from('rooms').select('*').eq('login_mode', mode).order('created_at')
+    let suppliesQ = sb.from('supplies').select('*').eq('login_mode', mode).order('created_at')
+    if (!isSolo && session?.organizationId) {
+      roomsQ = roomsQ.eq('organization_id', session.organizationId)
+      suppliesQ = suppliesQ.eq('organization_id', session.organizationId)
+    }
+    const [r, s, cfg] = await Promise.all([roomsQ, suppliesQ, sb.from('settings').select('*')])
     const settings = {}
     ;(cfg.data || []).forEach((x) => (settings[x.key] = x.value))
     set({ rooms: r.data || [], supplies: s.data || [], settings })

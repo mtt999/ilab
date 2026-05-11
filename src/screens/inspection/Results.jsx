@@ -75,7 +75,8 @@ function downloadWb(wb, filename) {
 }
 
 export default function Results() {
-  const { lastRecord, setScreen, toast } = useAppStore()
+  const { lastRecord, setScreen, toast, session } = useAppStore()
+  const orgId = session?.organizationId
   useEffect(() => { if (!lastRecord) setScreen('home') }, [lastRecord])
   if (!lastRecord) return null
 
@@ -97,7 +98,9 @@ export default function Results() {
   async function exportAllRecords() {
     try {
       toast('Loading all records…')
-      const { data: allRecs, error } = await sb.from('inspections').select('*').order('inspected_at', { ascending: true })
+      let q = sb.from('inspections').select('*').order('inspected_at', { ascending: true })
+      if (orgId) q = q.eq('organization_id', orgId)
+      const { data: allRecs, error } = await q
       if (error || !allRecs?.length) { toast('No records found.'); return }
 
       const wb = XLSX.utils.book_new()

@@ -565,7 +565,9 @@ export default function EquipmentHub() {
   async function load() {
     setLoading(true)
     const isSolo = session?.loginMode === 'solo'
-    const { data } = await sb.from('equipment_inventory').select('*').eq('is_active', true).eq('login_mode', isSolo ? 'solo' : 'team').order('category').order('equipment_name')
+    let q = sb.from('equipment_inventory').select('*').eq('is_active', true).eq('login_mode', isSolo ? 'solo' : 'team').order('category').order('equipment_name')
+    if (!isSolo && session?.organizationId) q = q.eq('organization_id', session.organizationId)
+    const { data } = await q
     setEquipment(data || [])
     setLoading(false)
     const autoSelect = localStorage.getItem('selectEquipment')

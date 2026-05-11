@@ -21,6 +21,7 @@ import BookingEquipment from './screens/equipment/BookingEquipment'
 import PM from './screens/maintenance/PM'
 import Toast from './components/Toast'
 import DashboardIconPicker from './components/DashboardIconPicker'
+import ForcePasswordChange from './components/ForcePasswordChange'
 import BarcodeScannerScreen from './screens/barcode/BarcodeScannerScreen'
 import BarcodeManager from './screens/barcode/BarcodeManager'
 import EquipmentScan from './screens/equipment/EquipmentScan'
@@ -173,6 +174,7 @@ export default function App() {
     <>
       <Layout>{screens[screen] || <Dashboard />}</Layout>
       <Toast />
+      {session?.mustChangePassword && <ForcePasswordChange />}
       {showIconPicker === true && (
         <DashboardIconPicker
           session={session}

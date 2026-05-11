@@ -72,7 +72,8 @@ function EquipmentModal({ item, onClose, onSaved, session }) {
     if (item) {
       await sb.from('equipment_inventory').update(payload).eq('id', item.id)
     } else {
-      await sb.from('equipment_inventory').insert({ ...payload, login_mode: session?.loginMode === 'solo' ? 'solo' : 'team' })
+      const lm = session?.loginMode === 'solo' ? 'solo' : 'team'
+      await sb.from('equipment_inventory').insert({ ...payload, login_mode: lm, organization_id: lm === 'team' ? (session?.organizationId || null) : null })
     }
     toast('Equipment saved.')
     setSaving(false)
@@ -186,7 +187,9 @@ function EquipmentList({ session }) {
   async function load() {
     setLoading(true)
     const isSolo = session?.loginMode === 'solo'
-    const { data } = await sb.from('equipment_inventory').select('*').eq('is_active', true).eq('login_mode', isSolo ? 'solo' : 'team').order('category').order('equipment_name')
+    let q = sb.from('equipment_inventory').select('*').eq('is_active', true).eq('login_mode', isSolo ? 'solo' : 'team').order('category').order('equipment_name')
+    if (!isSolo && session?.organizationId) q = q.eq('organization_id', session.organizationId)
+    const { data } = await q
     setItems(data || [])
     setLoading(false)
   }

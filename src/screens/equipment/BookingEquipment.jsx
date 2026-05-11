@@ -754,7 +754,9 @@ function BookingCalendar({ session }) {
 
   async function loadEquipment() {
     const isSolo = session?.loginMode === 'solo'
-    const { data } = await sb.from('equipment_inventory').select('id, equipment_name, nickname, category, location').eq('is_active', true).eq('login_mode', isSolo ? 'solo' : 'team').order('category').order('nickname')
+    let q = sb.from('equipment_inventory').select('id, equipment_name, nickname, category, location').eq('is_active', true).eq('login_mode', isSolo ? 'solo' : 'team').order('category').order('nickname')
+    if (!isSolo && session?.organizationId) q = q.eq('organization_id', session.organizationId)
+    const { data } = await q
     setEquipment(data || [])
     setLoading(false)
     // Check retraining blocks for this user

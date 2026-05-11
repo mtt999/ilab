@@ -3,7 +3,8 @@ import { sb } from '../../lib/supabase'
 import { useAppStore } from '../../store/useAppStore'
 
 export default function History() {
-  const { setLastRecord, setScreen } = useAppStore()
+  const { setLastRecord, setScreen, session } = useAppStore()
+  const orgId = session?.organizationId
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
   const [collapsed, setCollapsed] = useState({})
@@ -11,7 +12,9 @@ export default function History() {
   useEffect(() => { load() }, [])
 
   async function load() {
-    const { data } = await sb.from('inspections').select('*').order('inspected_at', { ascending: false }).limit(200)
+    let q = sb.from('inspections').select('*').order('inspected_at', { ascending: false }).limit(200)
+    if (orgId) q = q.eq('organization_id', orgId)
+    const { data } = await q
     setData(data || [])
     setLoading(false)
   }

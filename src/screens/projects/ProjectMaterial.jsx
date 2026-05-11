@@ -149,7 +149,7 @@ function NewProjectModal({ users, isSolo, soloOwnerId, onClose, onCreated }) {
   async function create() {
     if (!form.name.trim()) { toast('Project name is required.'); return }
     if (!form.project_id.trim()) { toast('Project title is required.'); return }
-    const payload = { name: form.name.trim(), project_id: form.project_id.trim(), cfop: form.cfop.trim() || null, status: form.status, pi_user_id: form.pi_user_id || null, student_ids: form.student_ids, sampling_date: form.sampling_date || null, storage_date: form.storage_date || null, notes: form.notes.trim() || null, solo_owner_id: soloOwnerId || null }
+    const payload = { name: form.name.trim(), project_id: form.project_id.trim(), cfop: form.cfop.trim() || null, status: form.status, pi_user_id: form.pi_user_id || null, student_ids: form.student_ids, sampling_date: form.sampling_date || null, storage_date: form.storage_date || null, notes: form.notes.trim() || null, solo_owner_id: soloOwnerId || null, organization_id: !soloOwnerId ? (session?.organizationId || null) : null }
     const { data, error } = await sb.from('projects').insert(payload).select().single()
     if (error) { toast('Error creating project.'); return }
     toast('Project created!'); onCreated(data.id); onClose()
@@ -1442,6 +1442,7 @@ function MaterialInventoryTab({ session, isSolo }) {
       }
     } else if (!isSolo) {
       q = q.is('solo_owner_id', null)
+      if (session?.organizationId) q = q.eq('organization_id', session.organizationId)
     }
 
     if (filter !== 'all') q = q.eq('status', filter)
@@ -1621,6 +1622,7 @@ export default function ProjectMaterial() {
       }
     } else if (!isSolo) {
       q = q.is('solo_owner_id', null)
+      if (session?.organizationId) q = q.eq('organization_id', session.organizationId)
     }
 
     const { data } = await q
