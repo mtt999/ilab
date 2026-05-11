@@ -247,9 +247,12 @@ function DashboardIconsPanel({ session }) {
         setSelected(new Set(savedArr || allKeys))
         setDisplayOrder(initOrder(savedArr, allKeys))
       } else {
-        const { data } = await sb.from('user_dashboard_prefs')
+        const { data: rows } = await sb.from('user_dashboard_prefs')
           .select('active_modules, allowed_modules')
-          .eq('user_id', session.userId).maybeSingle()
+          .eq('user_id', session.userId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+        const data = rows?.[0] ?? null
         if (session?.role === 'student') {
           const pool = data?.allowed_modules || []
           setAllowedPool(pool)
@@ -289,7 +292,14 @@ function DashboardIconsPanel({ session }) {
       } else if (isSolo) {
         await sb.from('solo_users').update({ active_modules: modules, has_set_dashboard: true }).eq('id', session.userId)
       } else {
-        await sb.from('user_dashboard_prefs').upsert({ user_id: session.userId, active_modules: modules, has_set_dashboard: true })
+        const { data: updated } = await sb.from('user_dashboard_prefs')
+          .update({ active_modules: modules, has_set_dashboard: true })
+          .eq('user_id', session.userId)
+          .select('id')
+        if (!updated?.length) {
+          await sb.from('user_dashboard_prefs')
+            .insert({ user_id: session.userId, active_modules: modules, has_set_dashboard: true })
+        }
       }
       toast('Dashboard icons saved ✓')
     } catch (e) { toast('Error saving preferences.') }

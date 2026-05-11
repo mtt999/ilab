@@ -12,11 +12,13 @@ export default function StudentIconManager({ student, onClose }) {
   useEffect(() => { load() }, [student.id])
 
   async function load() {
-    const { data } = await sb.from('user_dashboard_prefs')
+    const { data: rows } = await sb.from('user_dashboard_prefs')
       .select('allowed_modules')
       .eq('user_id', student.id)
-      .maybeSingle()
-    setAllowed(new Set(data?.allowed_modules?.length ? data.allowed_modules : []))
+      .order('created_at', { ascending: false })
+      .limit(1)
+    const row = rows?.[0] ?? null
+    setAllowed(new Set(row?.allowed_modules?.length ? row.allowed_modules : []))
   }
 
   function toggle(key) {
@@ -31,10 +33,13 @@ export default function StudentIconManager({ student, onClose }) {
   async function save() {
     setSaving(true)
     const modules = [...PINNED_MODULES, ...Array.from(allowed).filter(k => !PINNED_MODULES.includes(k))]
-    await sb.from('user_dashboard_prefs').upsert({
-      user_id: student.id,
-      allowed_modules: modules,
-    })
+    const { data: updated } = await sb.from('user_dashboard_prefs')
+      .update({ allowed_modules: modules })
+      .eq('user_id', student.id)
+      .select('id')
+    if (!updated?.length) {
+      await sb.from('user_dashboard_prefs').insert({ user_id: student.id, allowed_modules: modules })
+    }
     setSaving(false)
     onClose(true)
   }
