@@ -305,7 +305,7 @@ function DashboardIconsPanel({ session }) {
     <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
       <div style={{ fontSize: 36, marginBottom: 12 }}>🔒</div>
       <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 8 }}>No icons assigned yet</div>
-      <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>Your staff hasn't assigned dashboard icons for you yet.</div>
+      <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>Your lab manager hasn't assigned dashboard icons for you yet.</div>
     </div>
   )
 
@@ -772,7 +772,7 @@ function StudentModal({ student, onClose, onSave }) {
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.35)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
       <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:28, maxWidth:520, width:'100%', maxHeight:'90vh', overflowY:'auto', border:'1px solid var(--border)' }}>
-        <div style={{ fontWeight:600, fontSize:16, marginBottom:20 }}>{student ? 'Edit student' : 'Add student'}</div>
+        <div style={{ fontWeight:600, fontSize:16, marginBottom:20 }}>{student ? 'Edit lab user' : 'Add lab user'}</div>
         <div className="grid-2">
           <div className="field"><label>First Name *</label><input value={form.firstName} onChange={e=>setForm(f=>({...f,firstName:e.target.value}))} placeholder="e.g. Ivan" autoFocus /></div>
           <div className="field"><label>Last Name *</label><input value={form.lastName} onChange={e=>setForm(f=>({...f,lastName:e.target.value}))} placeholder="e.g. Akonya" /></div>
@@ -851,7 +851,7 @@ function StaffListPanel({ toast, session }) {
               <div>
                 <div style={{ fontWeight: 600 }}>
                   <span style={{ fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--text3)', marginRight: 6 }}>#{idx+1}</span>
-                  {s.name}<span style={{ marginLeft: 8, fontSize: 11, background: '#fff3e0', color: '#ff6b00', borderRadius: 3, padding: '1px 6px', fontWeight: 600 }}>Staff</span>
+                  {s.name}<span style={{ marginLeft: 8, fontSize: 11, background: '#fff3e0', color: '#ff6b00', borderRadius: 3, padding: '1px 6px', fontWeight: 600 }}>Lab Manager</span>
                   {!s.is_active && <span style={{ fontSize: 11, color: 'var(--accent2)', marginLeft: 6 }}>Inactive</span>}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--mono)', display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 2 }}>
@@ -860,7 +860,7 @@ function StaffListPanel({ toast, session }) {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
                   <span style={{ fontSize: 11, color: 'var(--text3)' }}>Change role:</span>
-                  {[{ label: 'Staff', role: 'user' }, { label: 'Student', role: 'student' }].map(opt => (
+                  {[{ label: 'Lab Manager', role: 'user' }, { label: 'Lab User', role: 'student' }].map(opt => (
                     <button key={opt.role} className={`btn btn-sm${s.role === opt.role ? ' btn-primary' : ''}`} style={{ fontSize: 11, padding: '2px 10px' }} onClick={() => setMemberRole(s, opt.role)}>{opt.label}</button>
                   ))}
                 </div>

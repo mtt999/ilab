@@ -16,7 +16,7 @@ export const ALL_MODULES_META = [
   { key: 'mileage',      screen: null,           label: 'Mileage Form',        sub: 'Submit mileage reimbursement',    icon: '🚗', bg: '#fdf0ed', color: '#c84b2f', roles: ['team', 'solo'], external: true },
   { key: 'labsafety',    screen: null,           label: 'Lab Safety',          sub: 'Safety training & certification', icon: '🦺', bg: '#fef3c7', color: '#92400e', roles: ['team', 'solo'], external: true },
   { key: 'profile',      screen: 'profile',      label: 'Profile',             sub: 'Your info & settings',            icon: '👤', bg: '#f3eeff', color: '#7c4dbd', roles: ['team', 'solo'] },
-  { key: 'barcodeqr',   screen: 'barcodeqr',   label: 'Barcode/QR Scan',     sub: 'Equipment QR code management',    icon: '🔲', bg: '#f0f4ff', color: '#1a56db', roles: ['team', 'solo'], adminOnly: true, soloLocked: true },
+  { key: 'barcodeqr',   screen: 'barcodeqr',   label: 'Barcode/QR Scan',     sub: 'Equipment QR code management',    icon: '🔲', bg: '#f0f4ff', color: '#1a56db', roles: ['team', 'solo'], studentLocked: true, soloLocked: true },
 ]
 
 export const PINNED_MODULES = ['profile']
@@ -90,7 +90,8 @@ export default function DashboardIconPicker({ session, loginMode, onDone }) {
   const [allowedPool, setAllowedPool] = useState(null)
   const [restrictedKeys, setRestrictedKeys] = useState(() => {
     if (isStaff) return new Set()
-    return new Set(ALL_MODULES_META.filter(m => m.adminOnly).map(m => m.key))
+    const locked = ALL_MODULES_META.filter(m => m.adminOnly || m.studentLocked).map(m => m.key)
+    return new Set(locked)
   })
   const [saving, setSaving] = useState(false)
 
@@ -102,7 +103,7 @@ export default function DashboardIconPicker({ session, loginMode, onDone }) {
       let pool = null
       // All users see all non-hideForStaff modules; adminOnly ones are locked for non-admins
       let localAvailable = ALL_MODULES_META.filter(m => (!m.hideForStaff || !isStaff))
-      let localRestricted = new Set(isStaff ? [] : ALL_MODULES_META.filter(m => m.adminOnly).map(m => m.key))
+      let localRestricted = new Set(isStaff ? [] : ALL_MODULES_META.filter(m => m.adminOnly || m.studentLocked).map(m => m.key))
       if (loginMode === 'solo') {
         ALL_MODULES_META.filter(m => m.soloLocked).forEach(m => localRestricted.add(m.key))
       }
@@ -125,9 +126,9 @@ export default function DashboardIconPicker({ session, loginMode, onDone }) {
           pool = prefsRes.data?.allowed_modules || []
           setAllowedPool(pool)
         } else if (session?.role === 'user') {
-          // Staff: adminOnly modules are restricted unless admin explicitly granted them
+          // Lab managers: adminOnly modules restricted unless explicitly granted; studentLocked modules are free
           const accessKeys = new Set((accessRes?.data || []).map(r => r.screen_key))
-          localRestricted = new Set(ALL_MODULES_META.filter(m => m.adminOnly && !accessKeys.has(m.screen)).map(m => m.key))
+          localRestricted = new Set(ALL_MODULES_META.filter(m => m.adminOnly && !m.studentLocked && !accessKeys.has(m.screen)).map(m => m.key))
         }
         // admin (role === 'admin'): localRestricted stays empty
       } else {
