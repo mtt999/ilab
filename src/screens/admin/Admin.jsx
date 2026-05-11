@@ -244,6 +244,7 @@ export default function Admin() {
   const [tab, setTab]         = useState('users')
   const [users, setUsers]     = useState([])
   const [orgs, setOrgs]       = useState([])
+  const [orgCounts, setOrgCounts] = useState({})
   const [search, setSearch]   = useState('')
   const [orgFilter, setOrgFilter] = useState(isSuperAdmin ? '' : myOrgId)
   const [loading, setLoading] = useState(false)
@@ -262,8 +263,14 @@ export default function Admin() {
   useEffect(() => { if (tab === 'users' || tab === 'students') loadUsers() }, [tab, orgFilter])
 
   async function loadOrgs() {
-    const { data } = await sb.from('organizations').select('*').order('name')
-    setOrgs(data || [])
+    const [{ data: orgData }, { data: countData }] = await Promise.all([
+      sb.from('organizations').select('*').order('name'),
+      sb.from('users').select('organization_id').not('organization_id', 'is', null),
+    ])
+    setOrgs(orgData || [])
+    const counts = {}
+    ;(countData || []).forEach(u => { counts[u.organization_id] = (counts[u.organization_id] || 0) + 1 })
+    setOrgCounts(counts)
   }
 
   async function loadUsers() {
@@ -300,7 +307,7 @@ export default function Admin() {
   async function deleteOrg(id) {
     if (!confirm('Delete this organization? All linked users will lose their org assignment.')) return
     await sb.from('organizations').delete().eq('id', id)
-    loadOrgs()
+    loadOrgs(); loadUsers()
     toast('Organization deleted.')
   }
 
@@ -397,7 +404,7 @@ export default function Admin() {
           {orgs.length === 0 ? (
             <div className="empty-state"><div className="empty-icon">🏢</div>No organizations yet.</div>
           ) : orgs.map(o => {
-            const count = users.filter(u => u.organization_id === o.id).length
+            const count = orgCounts[o.id] || 0
             return (
               <div key={o.id} className="card" style={{ padding: '14px 18px', marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
