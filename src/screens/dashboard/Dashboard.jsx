@@ -360,20 +360,20 @@ export default function Dashboard() {
     ? allModules.filter(m => m.external || !m.screen || UNMANAGED_SCREENS.has(m.screen) || userAccess.has(m.screen))
     : allModules
 
-  useEffect(() => { loadSettings() }, [])
+  useEffect(() => { loadSettings() }, [session?.userId])
   async function loadSettings() {
-    const { data } = await sb.from('settings').select('key, value')
-      .in('key', ['mileage_url','labsafety_url','img_supply','img_projects','img_training','img_equipment','img_equipmenthub','img_booking','img_barcode','img_mileage','img_labsafety','img_remessages','img_profile','img_pm'])
+    const { data, error } = await sb.from('settings').select('key, value')
+    if (error) { console.error('[loadSettings] settings query failed:', error.message); }
     const imgs = {
       pm:        '/ilab/icon-pm.svg',
       barcode:   '/ilab/icon-barcode.svg',
       barcodeqr: '/ilab/icon-barcodeqr.svg',
       profile:   '/ilab/icon-profile.svg',
     }
-    data?.forEach(r => {
+    ;(data || []).forEach(r => {
       if (r.key === 'mileage_url') setMileageUrl(r.value)
       else if (r.key === 'labsafety_url') setLabSafetyUrl(r.value)
-      else if (r.key.startsWith('img_')) imgs[r.key.replace('img_', '')] = r.value
+      else if (r.key?.startsWith('img_')) imgs[r.key.replace('img_', '')] = r.value
     })
     setModuleImages(imgs)
   }

@@ -41,13 +41,14 @@ function ModuleImagesPanel() {
       const ext = file.name.split('.').pop() || 'jpg'
       const path = `module-images/${def.key}-${Date.now()}.${ext}`
       const { error: upErr } = await sb.storage.from('project-files').upload(path, file, { upsert: true, contentType: file.type })
-      if (upErr) { toast('Upload failed: ' + upErr.message); return }
+      if (upErr) { toast('Storage upload failed: ' + upErr.message + ' — make sure the "project-files" bucket exists in Supabase Dashboard → Storage.'); return }
       const { data: urlData } = sb.storage.from('project-files').getPublicUrl(path)
       const url = urlData.publicUrl
+      console.log('[ModuleImages] saved URL:', def.settingsKey, url)
       const { error: saveErr } = await sb.from('settings').upsert({ key: def.settingsKey, value: url }, { onConflict: 'key' })
-      if (saveErr) { toast('Image uploaded but save failed: ' + saveErr.message + ' — run fix_settings_rls.sql in Supabase.'); return }
+      if (saveErr) { toast('Image uploaded but DB save failed: ' + saveErr.message + ' — run fix_settings_rls.sql in Supabase.'); return }
       setImages(prev => ({ ...prev, [def.settingsKey]: url }))
-      toast(`${def.label} image saved.`)
+      toast(`${def.label} image saved ✓`)
     } finally {
       setUploading(null)
       if (fileRefs.current[def.key]) fileRefs.current[def.key].value = ''
