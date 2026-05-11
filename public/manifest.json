@@ -1,11 +1,11 @@
 {
   "name": "iLab",
   "short_name": "iLab",
-  "start_url": "/pro-ilab/",
+  "start_url": "/ilab/",
   "display": "standalone",
   "background_color": "#0a0e1a",
   "theme_color": "#0a0e1a",
   "icons": [
-    { "src": "/pro-ilab/logo.svg", "sizes": "any", "type": "image/svg+xml" }
+    { "src": "/ilab/logo.svg", "sizes": "any", "type": "image/svg+xml" }
   ]
 }

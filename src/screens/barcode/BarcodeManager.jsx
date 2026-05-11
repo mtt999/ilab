@@ -45,7 +45,7 @@ const PRINT_LOGO_SVG = (size) => `<svg width="${size}" height="${size}" viewBox=
 </svg>`
 
 function getScanUrl(equipmentId) {
-  return `${window.location.origin}/pro-ilab/?eq=${equipmentId}`
+  return `${window.location.origin}/ilab/?eq=${equipmentId}`
 }
 
 // QR label for screen preview — colorful logo, iLab logo centered over QR

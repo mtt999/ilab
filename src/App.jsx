@@ -144,7 +144,7 @@ export default function App() {
     </div>
   )
 
-  // Admin-only route: /pro-ilab/admin
+  // Admin-only route: /ilab/admin
   if (IS_ADMIN_ROUTE) {
     if (!session || session.role !== 'admin') return <AdminLogin />
   }

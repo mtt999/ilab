@@ -66,7 +66,7 @@ export default function Layout({ children }) {
           <ILabLogo size={42} />
           {!isMobile && (
             <div>
-              <div style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 15, letterSpacing: '-0.3px', color: '#ffffff', lineHeight: 1.1 }}>InteleLab-ICT</div>
+              <div style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 15, letterSpacing: '-0.3px', color: '#ffffff', lineHeight: 1.1 }}>iLab</div>
               <div style={{ fontSize: 10, color: '#ffb380', fontWeight: 400, letterSpacing: '0.02em', lineHeight: 1.2 }}>The Intelligent Laboratory</div>
             </div>
           )}

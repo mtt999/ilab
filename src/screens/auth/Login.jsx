@@ -475,7 +475,7 @@ export default function Login() {
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 24, fontSize: 12, color: 'var(--text3)', lineHeight: 1.8 }}>
-          <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text2)' }}>InteleLab (iLab)</div>
+          <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text2)' }}>iLab</div>
           <div>Intelligent Laboratory Platform</div>
           <div style={{ fontWeight: 500, color: 'var(--text2)', marginTop: 4 }}>App developed by Mohsen Motlagh</div>
           <div>© {new Date().getFullYear()} All rights reserved</div>

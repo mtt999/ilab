@@ -362,10 +362,10 @@ export default function Dashboard() {
     const { data } = await sb.from('settings').select('key, value')
       .in('key', ['mileage_url','labsafety_url','img_supply','img_projects','img_training','img_equipment','img_equipmenthub','img_booking','img_barcode','img_mileage','img_labsafety','img_remessages','img_profile','img_pm'])
     const imgs = {
-      pm:        '/pro-ilab/icon-pm.svg',
-      barcode:   '/pro-ilab/icon-barcode.svg',
-      barcodeqr: '/pro-ilab/icon-barcodeqr.svg',
-      profile:   '/pro-ilab/icon-profile.svg',
+      pm:        '/ilab/icon-pm.svg',
+      barcode:   '/ilab/icon-barcode.svg',
+      barcodeqr: '/ilab/icon-barcodeqr.svg',
+      profile:   '/ilab/icon-profile.svg',
     }
     data?.forEach(r => {
       if (r.key === 'mileage_url') setMileageUrl(r.value)
