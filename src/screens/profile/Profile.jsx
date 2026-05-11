@@ -985,7 +985,7 @@ function UserProfileForm({ session, toast }) {
 
   async function saveInfo() {
     setSaving(true)
-    const { error } = await sb.from('users').update({ name: form.name.trim(), last_name: form.last_name||null, email: form.email||null, phone: form.phone||null, degree: form.degree||null, year_semester: form.year_semester||null, supervisor: form.supervisor||null, project_group: form.project_group||null, photo_url: form.photo_url||null }).eq('id', user.id)
+    const { error } = await sb.from('users').update({ name: form.name.trim(), last_name: form.last_name||null, phone: form.phone||null, degree: form.degree||null, year_semester: form.year_semester||null, supervisor: form.supervisor||null, project_group: form.project_group||null, photo_url: form.photo_url||null }).eq('id', user.id)
     if (error) { toast('Error saving: ' + error.message); setSaving(false); return }
     setSession({ ...session, username: form.name.trim(), photoUrl: form.photo_url||null })
     toast('Profile saved ✓'); setSaving(false); load()
@@ -1066,7 +1066,11 @@ function UserProfileForm({ session, toast }) {
             <div className="field"><label>Last Name</label><input value={form.last_name} onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))} /></div>
           </div>
           <div className="grid-2">
-            <div className="field"><label>Email</label><input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="netid@illinois.edu" /></div>
+            <div className="field">
+              <label>Email</label>
+              <input value={form.email} readOnly placeholder="—" style={{ background: 'var(--surface2)', color: 'var(--text3)', cursor: 'default' }} />
+              <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>Email is managed by your organization admin.</div>
+            </div>
             <div className="field"><label>Phone</label><input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></div>
           </div>
           <div className="grid-2">
