@@ -47,8 +47,8 @@ There are two separate sets that must stay in sync:
 If a screen is in `UNMANAGED_SCREENS` but NOT in `INTERNAL`, the icon shows but clicking it redirects back to dashboard. Both sets must contain the same unmanaged keys.
 
 **Current values (must match):**
-- `UNMANAGED_SCREENS` (Dashboard.jsx): `profile`, `dashboard`, `pm`, `barcode`
-- `INTERNAL` (App.jsx): `dashboard`, `profile`, `inspection`, `results`, `project-detail`, `pm`, `barcode`, `equipmentscan`, `barcodeqr`
+- `UNMANAGED_SCREENS` (Dashboard.jsx): `profile`, `dashboard`, `pm`, `barcode`, `orgadmin`
+- `INTERNAL` (App.jsx): `dashboard`, `profile`, `inspection`, `results`, `project-detail`, `pm`, `barcode`, `equipmentscan`, `barcodeqr`, `orgadmin`
 
 **Rule:** When adding a new module to `ALL_MODULES_META` that is not in `user_screen_access`, add its `screen` key to BOTH sets.
 
@@ -77,6 +77,29 @@ There are 3 login paths: admin, team user, and solo. All three must save to loca
 - **solo** — logged in via `solo_users` table (purple #534AB7 accent)
 - **team** — logged in via `users` table (green #1D9E75 accent)
 - **admin** — team login with `role = 'admin'`; accessed at `/original-ilab/admin`
+
+### Multi-tenancy & role hierarchy
+- **organizations** table: `id` (UUID), `name`, `slug`, `created_at`
+- **ICT org UUID**: `5bab5b33-fff9-4a4a-b617-3dac179f9678`
+- All team data tables have `organization_id` UUID FK (added via `schema_org_migration.sql`)
+- Session carries `organizationId` and `mustChangePassword` for team users
+- **Super admin** (`session.userId === null`, `session.role === 'admin'`): logs in at `/original-ilab/admin` via password in `settings` table. Can see and manage ALL organizations, all users.
+- **Org admin** (`session.userId !== null`, `session.role === 'admin'`): regular team user with admin role. Can only see and manage their own `organizationId`. Entry point is the Admin Panel card on Dashboard → screen `orgadmin`.
+- `Admin.jsx` (`src/screens/admin/Admin.jsx`) detects the two admin types via `session.userId === null`.
+
+### Post-build script
+`scripts/post-build.mjs` runs automatically after `npm run build` (via `postbuild` in package.json). It copies `docs/index.html` → `docs/admin/index.html` with the title changed to "iLab — Admin". This is required because Vite wipes `docs/` on every build, which would break the GitHub Pages `/admin` SPA route.
+
+**Do NOT** manually maintain `docs/admin/index.html` — the script handles it. If you add more SPA routes that need their own physical file, add them to this script.
+
+### First-login forced password change
+- `users.must_change_password` boolean (default `false`)
+- Set to `true` when admin creates a new user
+- On team login, session carries `mustChangePassword: true`
+- `ForcePasswordChange.jsx` (full-screen modal, `zIndex: 9999`) renders in `App.jsx` when `session?.mustChangePassword === true`
+- Blocks the entire app until user sets a new password (≥ 6 chars, different from current)
+- On success: updates `users` table + clears flag in session + localStorage
+- Team users cannot change their email (only admins can) — email field is `readOnly` in Profile/UserModal
 
 ### Session persistence flow
 1. User logs in → `Login.jsx` calls `setSession(obj)` + `localStorage.setItem('ilab_session', JSON.stringify(obj))`
