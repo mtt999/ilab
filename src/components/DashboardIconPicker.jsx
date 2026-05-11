@@ -113,17 +113,17 @@ export default function DashboardIconPicker({ session, loginMode, onDone }) {
         savedModules = data?.active_modules
       } else if (session?.userId) {
         const queries = [
-          sb.from('user_dashboard_prefs').select('active_modules, allowed_modules').eq('user_id', session.userId).maybeSingle(),
+          sb.from('user_dashboard_prefs').select('active_modules, allowed_modules').eq('user_id', session.userId).order('created_at', { ascending: false }).limit(1),
         ]
         // For staff: also load which screens admin has granted them
         if (session?.role === 'user') {
           queries.push(sb.from('user_screen_access').select('screen_key').eq('user_id', session.userId))
         }
         const [prefsRes, accessRes] = await Promise.all(queries)
-        savedModules = prefsRes.data?.active_modules
+        savedModules = prefsRes.data?.[0]?.active_modules
 
         if (session?.role === 'student') {
-          pool = prefsRes.data?.allowed_modules || []
+          pool = prefsRes.data?.[0]?.allowed_modules || []
           setAllowedPool(pool)
         } else if (session?.role === 'user') {
           // Lab managers: adminOnly modules restricted unless explicitly granted; studentLocked modules are free
@@ -183,14 +183,19 @@ export default function DashboardIconPicker({ session, loginMode, onDone }) {
       if (loginMode === 'solo' && session?.userId) {
         await sb.from('solo_users').update({ active_modules: modules, has_set_dashboard: true }).eq('id', session.userId)
       } else if (session?.userId) {
-        await sb.from('user_dashboard_prefs').upsert({ user_id: session.userId, active_modules: modules, has_set_dashboard: true })
+        const { data: updated } = await sb.from('user_dashboard_prefs')
+          .update({ active_modules: modules, has_set_dashboard: true })
+          .eq('user_id', session.userId)
+          .select('id')
+        if (!updated?.length) {
+          await sb.from('user_dashboard_prefs')
+            .insert({ user_id: session.userId, active_modules: modules, has_set_dashboard: true })
+        }
       } else {
         localStorage.setItem('ilab_admin_modules', JSON.stringify(modules))
         localStorage.setItem('ilab_admin_dashboard_set', 'true')
       }
     } catch (e) { console.error('Failed to save dashboard prefs:', e) }
-    // Always update global store immediately so dashboard reflects the change
-    // without needing a page reload or re-navigation
     setActiveModules(modules)
     setSaving(false)
     onDone(modules)

@@ -334,8 +334,9 @@ export default function Dashboard() {
         const { data } = await sb.from('solo_users').select('active_modules').eq('id', session.userId).maybeSingle()
         setActiveModules(data?.active_modules?.length ? data.active_modules : null)
       } else {
-        const { data } = await sb.from('user_dashboard_prefs').select('active_modules').eq('user_id', session.userId).maybeSingle()
-        setActiveModules(data?.active_modules?.length ? data.active_modules : null)
+        const { data } = await sb.from('user_dashboard_prefs').select('active_modules').eq('user_id', session.userId).order('created_at', { ascending: false }).limit(1)
+        const row = data?.[0]
+        setActiveModules(row?.active_modules?.length ? row.active_modules : null)
       }
     } catch(e) {}
   }

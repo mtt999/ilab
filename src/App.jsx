@@ -103,8 +103,8 @@ export default function App() {
         const { data } = await sb.from('solo_users').select('has_set_dashboard').eq('id', userId).maybeSingle()
         setShowIconPicker(data?.has_set_dashboard !== true)
       } else {
-        const { data } = await sb.from('user_dashboard_prefs').select('has_set_dashboard').eq('user_id', userId).maybeSingle()
-        setShowIconPicker(data?.has_set_dashboard !== true)
+        const { data } = await sb.from('user_dashboard_prefs').select('has_set_dashboard').eq('user_id', userId).order('created_at', { ascending: false }).limit(1)
+        setShowIconPicker(data?.[0]?.has_set_dashboard !== true)
       }
     } catch (e) {
       setShowIconPicker(false)
@@ -182,7 +182,22 @@ export default function App() {
           session={session}
           loginMode={session.loginMode}
           onDone={(modules) => {
-            if (!session.userId) localStorage.setItem('ilab_admin_dashboard_set', 'true')
+            if (!session.userId) {
+              localStorage.setItem('ilab_admin_dashboard_set', 'true')
+            } else if (!modules) {
+              // Dismissed without saving — mark as seen so picker doesn't reappear
+              if (session.loginMode === 'solo') {
+                sb.from('solo_users').update({ has_set_dashboard: true }).eq('id', session.userId).then(() => {})
+              } else {
+                sb.from('user_dashboard_prefs')
+                  .update({ has_set_dashboard: true }).eq('user_id', session.userId).select('id')
+                  .then(({ data }) => {
+                    if (!data?.length) {
+                      sb.from('user_dashboard_prefs').insert({ user_id: session.userId, has_set_dashboard: true }).then(() => {})
+                    }
+                  })
+              }
+            }
             if (modules) setActiveModules(modules)
             setShowIconPicker(false)
           }}
