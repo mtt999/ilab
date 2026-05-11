@@ -1,7 +1,7 @@
-import HelpPanel from '../components/HelpPanel'
+import HelpPanel from '../../components/HelpPanel'
 import { useState, useEffect, useRef } from 'react'
-import { sb } from '../lib/supabase'
-import { useAppStore } from '../store/useAppStore'
+import { sb } from '../../lib/supabase'
+import { useAppStore } from '../../store/useAppStore'
 import * as XLSX from 'xlsx'
 
 const CATEGORIES = [

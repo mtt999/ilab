@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useAppStore } from '../store/useAppStore'
-import { sb } from '../lib/supabase'
+import { useAppStore } from '../../store/useAppStore'
+import { sb } from '../../lib/supabase'
 
 export default function AdminLogin() {
   const { setSession } = useAppStore()

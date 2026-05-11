@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx-js-style'
 import { useEffect } from 'react'
-import { useAppStore } from '../store/useAppStore'
-import { sb } from '../lib/supabase'
+import { useAppStore } from '../../store/useAppStore'
+import { sb } from '../../lib/supabase'
 
 function safeSheetName(name) { return name.replace(/[:\\\/?*\[\]]/g, '-').substring(0, 31) }
 function fmtLinks(links) { return (links || []).map(l => `${l.label || 'Link'}: ${l.url}`).join(' | ') }

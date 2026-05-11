@@ -1,9 +1,9 @@
-import HelpPanel from '../components/HelpPanel'
+import HelpPanel from '../../components/HelpPanel'
 import { useState, useEffect, useRef } from 'react'
-import { useAppStore } from '../store/useAppStore'
-import { sb } from '../lib/supabase'
+import { useAppStore } from '../../store/useAppStore'
+import { sb } from '../../lib/supabase'
 import * as XLSX from 'xlsx-js-style'
-import Modal from '../components/Modal'
+import Modal from '../../components/Modal'
 
 const ICONS = ['🧪','🔬','📦','🏥','🧬','💊','🩺','🧫','⚗️','🔭','🩻','🧰']
 const ROOM_KEYWORDS = ['room','lab','highbay','high bay','bay','shed','office','tool','storage','corridor','hall','area']

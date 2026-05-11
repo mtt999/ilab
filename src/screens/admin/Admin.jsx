@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import * as XLSX from 'xlsx'
-import { sb } from '../lib/supabase'
-import { useAppStore } from '../store/useAppStore'
-import Modal from '../components/Modal'
-import { hashPassword } from '../lib/crypto'
+import { sb } from '../../lib/supabase'
+import { useAppStore } from '../../store/useAppStore'
+import Modal from '../../components/Modal'
+import { hashPassword } from '../../lib/crypto'
 
 // ── Icon picker ──────────────────────────────────────────────
 const ICONS = ['🧪','🔬','📦','🏥','🧬','💊','🩺','🧫','⚗️','🔭','🩻','🧰']

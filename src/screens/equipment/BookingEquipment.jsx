@@ -1,8 +1,8 @@
-import HelpPanel from '../components/HelpPanel'
+import HelpPanel from '../../components/HelpPanel'
 import React from 'react'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { sb } from '../lib/supabase'
-import { useAppStore } from '../store/useAppStore'
+import { sb } from '../../lib/supabase'
+import { useAppStore } from '../../store/useAppStore'
 
 function canEdit(s) { return s?.role === 'admin' || s?.role === 'user' }
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { sb } from '../lib/supabase'
-import { useAppStore } from '../store/useAppStore'
+import { sb } from '../../lib/supabase'
+import { useAppStore } from '../../store/useAppStore'
 
 const TYPE_LABELS = { aggregate: 'Aggregate', asphalt_binder: 'Asphalt Binder', plant_mix: 'Plant Mix', cores: 'Cores', other: 'Other' }
 const typeLabel = t => TYPE_LABELS[t] || t || '—'

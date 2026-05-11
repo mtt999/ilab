@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { sb } from '../lib/supabase'
-import { useAppStore } from '../store/useAppStore'
+import { sb } from '../../lib/supabase'
+import { useAppStore } from '../../store/useAppStore'
 
 function ILabLogo({ size = 40 }) {
   return (

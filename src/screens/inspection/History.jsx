@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { sb } from '../lib/supabase'
-import { useAppStore } from '../store/useAppStore'
+import { sb } from '../../lib/supabase'
+import { useAppStore } from '../../store/useAppStore'
 
 export default function History() {
   const { setLastRecord, setScreen } = useAppStore()

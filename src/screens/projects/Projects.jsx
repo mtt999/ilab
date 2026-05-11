@@ -1,10 +1,10 @@
-import HelpPanel from '../components/HelpPanel'
+import HelpPanel from '../../components/HelpPanel'
 import { useState, useEffect } from 'react'
-import { sb } from '../lib/supabase'
-import { useAppStore } from '../store/useAppStore'
-import Modal from '../components/Modal'
+import { sb } from '../../lib/supabase'
+import { useAppStore } from '../../store/useAppStore'
+import Modal from '../../components/Modal'
 import ProjectMaterials from './ProjectMaterials'
-import MaterialStorage from './MaterialStorage'
+import MaterialStorage from '../storage/MaterialStorage'
 import ProjectDatabase from './ProjectDatabase'
 
 // ── Result input that adapts to result type ──────────────────

@@ -1,11 +1,11 @@
-import HelpPanel from '../components/HelpPanel'
-import { useAppStore } from '../store/useAppStore'
-import { sb } from '../lib/supabase'
+import HelpPanel from '../../components/HelpPanel'
+import { useAppStore } from '../../store/useAppStore'
+import { sb } from '../../lib/supabase'
 import { useState, useEffect, useRef } from 'react'
-import { hashPassword, verifyPassword } from '../lib/crypto'
-import DashboardIconPicker, { ALL_MODULES_META, PINNED_MODULES } from '../components/DashboardIconPicker'
-import StudentIconManager from '../components/StudentIconManager'
-import TeammatesPanel from '../components/TeammatesPanel'
+import { hashPassword, verifyPassword } from '../../lib/crypto'
+import DashboardIconPicker, { ALL_MODULES_META, PINNED_MODULES } from '../../components/DashboardIconPicker'
+import StudentIconManager from '../../components/StudentIconManager'
+import TeammatesPanel from '../../components/TeammatesPanel'
 
 const PROJECT_GROUPS = ['Material', 'Sustainability', 'GPR', 'Mechanic', 'Other']
 const DEGREES = ['MS', 'PhD', 'BS', 'Other']

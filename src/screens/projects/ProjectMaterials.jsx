@@ -1,8 +1,8 @@
-import FloorPlanPicker from '../components/FloorPlanPicker'
+import FloorPlanPicker from '../../components/FloorPlanPicker'
 import { useState, useEffect, useRef } from 'react'
-import { sb } from '../lib/supabase'
-import { useAppStore } from '../store/useAppStore'
-import Modal from '../components/Modal'
+import { sb } from '../../lib/supabase'
+import { useAppStore } from '../../store/useAppStore'
+import Modal from '../../components/Modal'
 
 // ── Constants ─────────────────────────────────────────────────
 const NMAS_OPTIONS = ['37.5mm','25mm','19mm','12.5mm','9.5mm','4.75mm']

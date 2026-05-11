@@ -1,7 +1,7 @@
-import { useAppStore } from '../store/useAppStore'
-import { sb } from '../lib/supabase'
+import { useAppStore } from '../../store/useAppStore'
+import { sb } from '../../lib/supabase'
 import { useState } from 'react'
-import { hashPassword, verifyPassword } from '../lib/crypto'
+import { hashPassword, verifyPassword } from '../../lib/crypto'
 
 function ILabLogo({ size = 120 }) {
   return (

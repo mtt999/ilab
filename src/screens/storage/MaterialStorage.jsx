@@ -1,7 +1,7 @@
-import FloorPlanPicker from '../components/FloorPlanPicker'
+import FloorPlanPicker from '../../components/FloorPlanPicker'
 import { useState, useEffect, useRef } from 'react'
-import { sb } from '../lib/supabase'
-import { useAppStore } from '../store/useAppStore'
+import { sb } from '../../lib/supabase'
+import { useAppStore } from '../../store/useAppStore'
 
 function QRCode({ value, size = 180 }) {
   const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(value)}&margin=10`

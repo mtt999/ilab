@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useAppStore } from '../store/useAppStore'
-import { sb } from '../lib/supabase'
+import { useAppStore } from '../../store/useAppStore'
+import { sb } from '../../lib/supabase'
 
 export default function Inspection() {
   const { inspection, setInspection, setScreen, setLastRecord, session, toast } = useAppStore()

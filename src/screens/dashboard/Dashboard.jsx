@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { sb } from '../lib/supabase'
-import { useAppStore } from '../store/useAppStore'
-import { ALL_MODULES_META, PINNED_MODULES } from '../components/DashboardIconPicker'
+import { sb } from '../../lib/supabase'
+import { useAppStore } from '../../store/useAppStore'
+import { ALL_MODULES_META, PINNED_MODULES } from '../../components/DashboardIconPicker'
 
 function getModules(role, loginMode, activeModules) {
   const roleKey = loginMode === 'solo' ? 'solo' : 'team'

@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx-js-style'
 import { useState, useEffect, useRef } from 'react'
-import { sb } from '../lib/supabase'
-import { useAppStore } from '../store/useAppStore'
+import { sb } from '../../lib/supabase'
+import { useAppStore } from '../../store/useAppStore'
 
 const BLUE = '#0d47a1'
 const ORANGE = '#ff6b00'

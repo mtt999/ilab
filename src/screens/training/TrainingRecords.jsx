@@ -1,9 +1,9 @@
-import HelpPanel from '../components/HelpPanel'
+import HelpPanel from '../../components/HelpPanel'
 import React from 'react'
 import { TrainingRequestsPanel, UserTrainingSchedule, ExamTab } from './TrainingSchedule'
 import { useState, useEffect, useRef } from 'react'
-import { sb } from '../lib/supabase'
-import { useAppStore } from '../store/useAppStore'
+import { sb } from '../../lib/supabase'
+import { useAppStore } from '../../store/useAppStore'
 
 const PROJECT_GROUPS = ['Material', 'Sustainability', 'GPR', 'Mechanic', 'Other']
 

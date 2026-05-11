@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { sb } from '../lib/supabase'
-import { useAppStore } from '../store/useAppStore'
-import Modal from '../components/Modal'
+import { sb } from '../../lib/supabase'
+import { useAppStore } from '../../store/useAppStore'
+import Modal from '../../components/Modal'
 
 export default function ProjectDetail() {
   const { currentProjectId, setScreen, toast } = useAppStore()
