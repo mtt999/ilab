@@ -47,7 +47,7 @@ There are two separate sets that must stay in sync:
 If a screen is in `UNMANAGED_SCREENS` but NOT in `INTERNAL`, the icon shows but clicking it redirects back to dashboard. Both sets must contain the same unmanaged keys.
 
 **Current values (must match):**
-- `UNMANAGED_SCREENS` (Dashboard.jsx): `profile`, `dashboard`, `pm`, `barcode`, `orgadmin`
+- `UNMANAGED_SCREENS` (Dashboard.jsx): `profile`, `dashboard`, `pm`, `barcode`, `barcodeqr`, `orgadmin`
 - `INTERNAL` (App.jsx): `dashboard`, `profile`, `inspection`, `results`, `project-detail`, `pm`, `barcode`, `equipmentscan`, `barcodeqr`, `orgadmin`
 
 **Rule:** When adding a new module to `ALL_MODULES_META` that is not in `user_screen_access`, add its `screen` key to BOTH sets.
@@ -161,7 +161,7 @@ Key fields:
 - Settings tab was removed — access control for barcode is managed via Profile → Dashboard Icons
 - Print logo (`PRINT_LOGO_SVG`): pure B&W — black hexagon stroke on white, no gray tones (invisible on monochrome printers)
 - QR logo size: `is2x2 ? 36 : 72` (increased from 26/52 for better visibility on small labels)
-- `barcodeqr` module is `adminOnly: true` — non-admin users see it as a locked card in the icon picker
+- `barcodeqr` module is `studentLocked: true` — lab managers (role=user/admin) can use it freely; lab users (role=student) see it locked. It is in UNMANAGED_SCREENS so it always shows for lab managers regardless of their user_screen_access entries.
 
 ### Solo workspace sharing
 - `solo_workspace_invites` — pending/accepted/declined invites between solo users
