@@ -470,13 +470,6 @@ export default function Login() {
                 </button>
               )}
 
-              {mode === 'team' && (
-                <div style={{ marginTop: 16, padding: '10px 14px', background: 'var(--surface2)', borderRadius: 8, fontSize: 12, color: 'var(--text3)', lineHeight: 1.7 }}>
-                  <div style={{ fontWeight: 500, color: 'var(--text2)', marginBottom: 2 }}>Forgot User ID or Password?</div>
-                  <div>Contact Research Engineers at ICT</div>
-                  <a href="mailto:ictengineers@illinois.edu" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>ictengineers@illinois.edu</a>
-                </div>
-              )}
             </>
           )}
         </div>
