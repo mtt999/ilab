@@ -394,6 +394,35 @@ export default function Dashboard() {
   const now = new Date()
   const dateStr = `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`
 
+  const isSuperAdmin = isAdmin && !session?.userId
+
+  // Super admin sees only the Admin Panel entry point — no org data, no module icons
+  if (isSuperAdmin) {
+    return (
+      <div>
+        <div style={{ marginBottom:28 }}>
+          <div style={{ fontSize:22, fontWeight:600, letterSpacing:'-0.4px', marginBottom:4 }}>{greeting()}, {session?.username}</div>
+          <div style={{ fontSize:13, color:'var(--text3)', fontFamily:'var(--mono)' }}>{dateStr} · iLab Super Admin</div>
+        </div>
+        <div
+          onClick={() => setScreen('orgadmin')}
+          style={{ display:'flex', alignItems:'center', gap:12, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'14px 20px', marginBottom:20, cursor:'pointer', transition:'all 0.15s' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = '#1D9E75'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(29,158,117,0.12)' }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}>
+          <div style={{ fontSize:28 }}>⚙️</div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontWeight:600, fontSize:14, color:'var(--text)' }}>Admin Panel</div>
+            <div style={{ fontSize:12, color:'var(--text3)' }}>Manage organizations, users & platform settings</div>
+          </div>
+          <div style={{ fontSize:12, color:'var(--text3)' }}>→</div>
+        </div>
+        <div style={{ textAlign:'center', padding:'40px 20px', color:'var(--text3)', fontSize:13 }}>
+          Select an organization from the Admin Panel to manage its data.
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:28, flexWrap:'wrap', gap:12 }}>

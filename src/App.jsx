@@ -95,8 +95,8 @@ export default function App() {
       // Don't interrupt with the icon picker when the user arrived via a QR scan
       if (SCAN_EQ_ID) { setShowIconPicker(false); return }
       if (!userId) {
-        const done = localStorage.getItem('ilab_admin_dashboard_set') === 'true'
-        setShowIconPicker(!done)
+        // Super admin: never show icon picker — they only use the Admin Panel
+        setShowIconPicker(false)
         return
       }
       if (loginMode === 'solo') {
@@ -125,6 +125,11 @@ export default function App() {
   }, [session?.userId])
 
   useEffect(() => {
+    // Super admin (no userId): can only access dashboard and orgadmin
+    if (session?.role === 'admin' && !session?.userId) {
+      if (screen !== 'dashboard' && screen !== 'orgadmin') setScreen('dashboard')
+      return
+    }
     if (session?.role === 'student') {
       const allowed = ['dashboard', 'projects', 'project-detail', 'training', 'profile', 'equipmenthub', 'booking', 'remessages', 'barcode', 'equipmentscan']
       if (!allowed.includes(screen)) setScreen('dashboard')
