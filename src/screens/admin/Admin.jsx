@@ -5,6 +5,104 @@ import Modal from '../../components/Modal'
 import { hashPassword } from '../../lib/crypto'
 import { ALL_MODULES_META } from '../../components/DashboardIconPicker'
 
+const MODULE_IMAGE_DEFS = [
+  { key: 'supply',       settingsKey: 'img_supply',       label: 'Supply Inventory',    icon: '📦' },
+  { key: 'projects',     settingsKey: 'img_projects',     label: 'Project & Material',  icon: '🧪' },
+  { key: 'training',     settingsKey: 'img_training',     label: 'Training Records',    icon: '🎓' },
+  { key: 'equipment',    settingsKey: 'img_equipment',    label: 'Equipment Inventory', icon: '🔧' },
+  { key: 'equipmenthub', settingsKey: 'img_equipmenthub', label: 'Equipment Hub',       icon: '📚' },
+  { key: 'booking',      settingsKey: 'img_booking',      label: 'Booking Equipment',   icon: '📅' },
+  { key: 'remessages',   settingsKey: 'img_remessages',   label: 'RE Messages',         icon: '💬' },
+  { key: 'pm',           settingsKey: 'img_pm',           label: 'Project Management',  icon: '📋' },
+  { key: 'mileage',      settingsKey: 'img_mileage',      label: 'Mileage Form',        icon: '🚗' },
+  { key: 'labsafety',    settingsKey: 'img_labsafety',    label: 'Lab Safety',          icon: '🦺' },
+]
+
+function ModuleImagesPanel() {
+  const { toast } = useAppStore()
+  const [images, setImages] = useState({})
+  const [uploading, setUploading] = useState(null)
+  const fileRefs = useRef({})
+
+  useEffect(() => { loadImages() }, [])
+
+  async function loadImages() {
+    const keys = MODULE_IMAGE_DEFS.map(m => m.settingsKey)
+    const { data } = await sb.from('settings').select('key, value').in('key', keys)
+    const map = {}
+    ;(data || []).forEach(r => { map[r.key] = r.value })
+    setImages(map)
+  }
+
+  async function handleUpload(def, file) {
+    if (!file) return
+    setUploading(def.key)
+    try {
+      const ext = file.name.split('.').pop() || 'jpg'
+      const path = `module-images/${def.key}-${Date.now()}.${ext}`
+      const { error: upErr } = await sb.storage.from('project-files').upload(path, file, { upsert: true, contentType: file.type })
+      if (upErr) { toast('Upload failed: ' + upErr.message); return }
+      const { data: urlData } = sb.storage.from('project-files').getPublicUrl(path)
+      const url = urlData.publicUrl
+      await sb.from('settings').upsert({ key: def.settingsKey, value: url }, { onConflict: 'key' })
+      setImages(prev => ({ ...prev, [def.settingsKey]: url }))
+      toast(`${def.label} image updated. Reload dashboard to see it.`)
+    } finally {
+      setUploading(null)
+      if (fileRefs.current[def.key]) fileRefs.current[def.key].value = ''
+    }
+  }
+
+  async function clearImage(def) {
+    await sb.from('settings').delete().eq('key', def.settingsKey)
+    setImages(prev => { const n = { ...prev }; delete n[def.settingsKey]; return n })
+    toast(`${def.label} image removed.`)
+  }
+
+  return (
+    <div>
+      <div style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 18, lineHeight: 1.6 }}>
+        Upload background images for dashboard module cards. Best size: landscape, around 800×500 px. Changes apply after refreshing the dashboard.
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 14 }}>
+        {MODULE_IMAGE_DEFS.map(def => {
+          const currentUrl = images[def.settingsKey]
+          const isUploading = uploading === def.key
+          return (
+            <div key={def.key} style={{ borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden', background: 'var(--surface)' }}>
+              <div style={{ height: 118, position: 'relative', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {currentUrl
+                  ? <img src={currentUrl} alt={def.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { e.target.style.display = 'none' }} />
+                  : <div style={{ fontSize: 34, opacity: 0.35 }}>{def.icon}</div>
+                }
+                {currentUrl && (
+                  <button onClick={() => clearImage(def)}
+                    style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.55)', border: 'none', color: '#fff', borderRadius: 6, fontSize: 11, padding: '3px 8px', cursor: 'pointer', fontWeight: 500 }}>
+                    ✕ Remove
+                  </button>
+                )}
+                {isUploading && (
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="spinner" />
+                  </div>
+                )}
+              </div>
+              <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{def.label}</div>
+                <button className="btn btn-sm btn-primary" disabled={isUploading} onClick={() => fileRefs.current[def.key]?.click()}>
+                  {currentUrl ? 'Replace' : 'Upload'}
+                </button>
+                <input type="file" accept="image/*" ref={el => fileRefs.current[def.key] = el} style={{ display: 'none' }}
+                  onChange={e => { handleUpload(def, e.target.files[0]) }} />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // Super admin: session.userId === null (logged in via /admin password)
 // Org admin:   session.userId !== null && session.role === 'admin'
 
@@ -252,7 +350,7 @@ export default function Admin() {
   const tabs = [
     { key: 'users', label: 'Users' },
     { key: 'students', label: 'Lab Users' },
-    ...(isSuperAdmin ? [{ key: 'organizations', label: 'Organizations' }] : []),
+    ...(isSuperAdmin ? [{ key: 'organizations', label: 'Organizations' }] : [{ key: 'images', label: 'Module Images' }]),
   ]
 
   useEffect(() => { loadOrgs() }, [])
@@ -390,6 +488,9 @@ export default function Admin() {
           )}
         </div>
       )}
+
+      {/* ── MODULE IMAGES (org admin only) ── */}
+      {tab === 'images' && !isSuperAdmin && <ModuleImagesPanel />}
 
       {/* ── ORGANIZATIONS (super admin only) ── */}
       {tab === 'organizations' && isSuperAdmin && (

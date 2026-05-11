@@ -103,8 +103,8 @@ function SignUpForm({ onSuccess, onCancel }) {
     if (form.password !== form.confirm) { setError('Passwords do not match.'); return }
     setLoading(true)
 
-    const { data: existing } = await sb.from('solo_users').select('id').ilike('email', form.email.trim()).maybeSingle()
-    if (existing) { setError('An account with this email already exists. Please sign in.'); setLoading(false); return }
+    const { data: existingRows } = await sb.from('solo_users').select('id').ilike('email', form.email.trim()).limit(1)
+    if (existingRows?.[0]) { setError('An account with this email already exists. Please sign in.'); setLoading(false); return }
 
     const hashed = await hashPassword(form.password)
     const { data, error: insertErr } = await sb.from('solo_users').insert({
@@ -281,9 +281,11 @@ export default function Login() {
     }
 
     if (mode === 'solo') {
-      const { data: soloUser, error: soloErr } = await sb
-        .from('solo_users').select('*').eq('is_active', true).ilike('email', identifierLower).maybeSingle()
-      if (soloErr || !soloUser) { setError('No Solo account found. Please sign up first.'); setLoading(false); return }
+      const { data: soloRows } = await sb
+        .from('solo_users').select('*').ilike('email', identifierLower).limit(1)
+      const soloUser = soloRows?.[0] || null
+      if (!soloUser) { setError('No Solo account found. Please sign up first.'); setLoading(false); return }
+      if (soloUser.is_active === false) { setError('This account is deactivated.'); setLoading(false); return }
       if (!(await verifyPassword(password, soloUser.password))) { setError('Incorrect password.'); setLoading(false); return }
       if (soloUser.password && !soloUser.password.startsWith('$2')) {
         const hashed = await hashPassword(password)
@@ -485,3 +487,4 @@ export default function Login() {
     </div>
   )
 }
+// FORCE_REBUILD_TEST_1778520430

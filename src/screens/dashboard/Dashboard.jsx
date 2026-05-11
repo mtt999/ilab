@@ -72,20 +72,22 @@ function ExternalLinkModal({ url, onConfirm, onCancel }) {
 }
 
 function ModuleCard({ m, onClick, imgUrl, isAdminManage }) {
+  const [imgOk, setImgOk] = useState(false)
+  const hasImg = imgOk
   return (
     <div onClick={onClick}
       style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', cursor: 'pointer', border: isAdminManage ? '1px dashed var(--border)' : '1px solid var(--border)', transition: 'all 0.15s', position: 'relative', height: 160 }}
       onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.12)' }}
       onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}>
-      {imgUrl ? <img src={imgUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
-              : <div style={{ position: 'absolute', inset: 0, background: m.bg, pointerEvents: 'none' }} />}
-      <div style={{ position: 'absolute', inset: 0, background: imgUrl ? 'linear-gradient(to top, rgba(0,0,0,0.72) 40%, rgba(0,0,0,0.1) 100%)' : 'linear-gradient(to top, rgba(0,0,0,0.15) 0%, transparent 100%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', inset: 0, background: m.bg, pointerEvents: 'none' }} />
+      {imgUrl && <img src={imgUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none', display: hasImg ? 'block' : 'none' }} onLoad={() => setImgOk(true)} onError={() => setImgOk(false)} />}
+      <div style={{ position: 'absolute', inset: 0, background: hasImg ? 'linear-gradient(to top, rgba(0,0,0,0.72) 40%, rgba(0,0,0,0.1) 100%)' : 'linear-gradient(to top, rgba(0,0,0,0.15) 0%, transparent 100%)', pointerEvents: 'none' }} />
       {m.external && <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: 10, borderRadius: 4, padding: '2px 6px', pointerEvents: 'none' }}>↗ External</div>}
       {isAdminManage && <div style={{ position: 'absolute', top: 10, right: 10, background: m.color, color: '#fff', fontSize: 10, borderRadius: 4, padding: '2px 8px', fontWeight: 600, pointerEvents: 'none' }}>⚙ Edit</div>}
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 14px', pointerEvents: 'none' }}>
-        {!imgUrl && <div style={{ fontSize: 28, marginBottom: 6 }}>{m.icon}</div>}
-        <div style={{ fontWeight: 700, fontSize: 14, color: imgUrl ? '#fff' : m.color, textShadow: imgUrl ? '0 1px 3px rgba(0,0,0,0.5)' : 'none', marginBottom: 2 }}>{m.label}</div>
-        <div style={{ fontSize: 11, color: imgUrl ? 'rgba(255,255,255,0.82)' : m.color, opacity: imgUrl ? 1 : 0.75 }}>{isAdminManage ? 'Click to manage link' : m.sub}</div>
+        {!hasImg && <div style={{ fontSize: 28, marginBottom: 6 }}>{m.icon}</div>}
+        <div style={{ fontWeight: 700, fontSize: 14, color: hasImg ? '#fff' : m.color, textShadow: hasImg ? '0 1px 3px rgba(0,0,0,0.5)' : 'none', marginBottom: 2 }}>{m.label}</div>
+        <div style={{ fontSize: 11, color: hasImg ? 'rgba(255,255,255,0.82)' : m.color, opacity: hasImg ? 1 : 0.75 }}>{isAdminManage ? 'Click to manage link' : m.sub}</div>
       </div>
     </div>
   )
