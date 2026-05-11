@@ -323,7 +323,7 @@ function AdvancedSearch({ projects, users, onResults, onClear }) {
             <div className="field" style={{ marginBottom: 0 }}>
               <label>Student in team</label>
               <select value={q.student} onChange={e => setQ(f => ({ ...f, student: e.target.value }))}>
-                <option value="">Any student</option>
+                <option value="">Any lab user</option>
                 {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
             </div>
@@ -405,7 +405,7 @@ function ProjectInfo({ project, users, onSaved }) {
           {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
         </select>
       </div>
-      <div className="field"><label>Students</label>
+      <div className="field"><label>Lab Users</label>
         <div style={{ background: 'var(--surface2)', borderRadius: 'var(--radius)', padding: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 8 }}>
           {users.length === 0
             ? <div style={{ fontSize: 13, color: 'var(--text3)', gridColumn: '1/-1' }}>No users found.</div>
@@ -443,9 +443,9 @@ function ProjectInfo({ project, users, onSaved }) {
         <InfoCell label="Storage Date" value={project.storage_date} />
       </div>
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Students</div>
+        <div style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Lab Users</div>
         {studentUsers.length === 0
-          ? <div style={{ color: 'var(--text3)', fontSize: 14 }}>No students assigned</div>
+          ? <div style={{ color: 'var(--text3)', fontSize: 14 }}>No lab users assigned</div>
           : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {studentUsers.map(u => <span key={u.id} style={{ background: 'var(--accent3-light)', color: 'var(--accent3)', borderRadius: 99, padding: '5px 14px', fontSize: 13, fontWeight: 500 }}>👤 {u.name}</span>)}
             </div>
@@ -499,7 +499,7 @@ function NewProjectModal({ users, onClose, onCreated, soloOwnerId }) {
           {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
         </select>
       </div>
-      <div className="field"><label>Students</label>
+      <div className="field"><label>Lab Users</label>
         <div style={{ background: 'var(--surface2)', borderRadius: 'var(--radius)', padding: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8, maxHeight: 200, overflowY: 'auto' }}>
           {users.length === 0
             ? <div style={{ fontSize: 13, color: 'var(--text3)', gridColumn: '1/-1' }}>No users found.</div>

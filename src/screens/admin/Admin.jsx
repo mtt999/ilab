@@ -101,9 +101,9 @@ function UserModal({ user, orgs, defaultOrgId, isSuperAdmin, onClose, onSaved })
       <div className="grid-2">
         <div className="field"><label>Role</label>
           <select value={role} onChange={e => setRole(e.target.value)}>
-            <option value="user">Staff / Researcher</option>
+            <option value="user">Lab Manager</option>
             <option value="admin">Org Admin</option>
-            <option value="student">Student</option>
+            <option value="student">Lab User</option>
           </select>
         </div>
         {isSuperAdmin && (
@@ -255,7 +255,7 @@ export default function Admin() {
 
   const tabs = [
     { key: 'users', label: 'Users' },
-    { key: 'students', label: 'Students' },
+    { key: 'students', label: 'Lab Users' },
     ...(isSuperAdmin ? [{ key: 'organizations', label: 'Organizations' }] : []),
   ]
 
@@ -352,7 +352,7 @@ export default function Admin() {
               </select>
             )}
             <button className="btn btn-primary btn-sm" onClick={() => setUserModal('add')}>
-              + Add {tab === 'students' ? 'student' : 'user'}
+              + Add {tab === 'students' ? 'lab user' : 'lab manager'}
             </button>
           </div>
 
@@ -368,7 +368,7 @@ export default function Admin() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontWeight: 600 }}>{u.name}</span>
                       <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: u.role === 'admin' ? '#FEF3C7' : u.role === 'student' ? '#EDE9FE' : '#E1F5EE', color: u.role === 'admin' ? '#92400E' : u.role === 'student' ? '#5B21B6' : '#065F46', fontWeight: 600 }}>
-                        {u.role === 'admin' ? 'Org Admin' : u.role === 'student' ? 'Student' : 'Staff'}
+                        {u.role === 'admin' ? 'Org Admin' : u.role === 'student' ? 'Lab User' : 'Lab Manager'}
                       </span>
                       {!u.is_active && <span style={{ fontSize: 11, color: 'var(--accent2)', fontWeight: 500 }}>Inactive</span>}
                       {u.must_change_password && <span style={{ fontSize: 11, color: '#D97706', fontWeight: 500 }}>⚠ Temp password</span>}

@@ -98,7 +98,7 @@ function LockedCard({ m }) {
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.55)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, pointerEvents: 'none' }}>
         <div style={{ fontSize: 22, filter: 'grayscale(1)', opacity: 0.4 }}>{m.icon}</div>
         <div style={{ fontSize: 13, fontWeight: 600, color: '#888' }}>{m.label}</div>
-        <div style={{ fontSize: 10, color: '#aaa' }}>🔒 Staff only</div>
+        <div style={{ fontSize: 10, color: '#aaa' }}>🔒 Lab managers only</div>
       </div>
     </div>
   )
@@ -251,7 +251,7 @@ function DashboardView({ modules, onNavigate, mileageUrl, labSafetyUrl, moduleIm
           <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12, marginBottom:20 }}>
             {[
               { label:'Active projects',       value:stats.activeProjects,  color:'#7c4dbd', screen:'projects' },
-              { label:'Active students',        value:stats.students,        color:'#0369a1', screen:'training' },
+              { label:'Active lab users',        value:stats.students,        color:'#0369a1', screen:'training' },
               { label:'Pending cert approvals', value:stats.pendingTraining, color:'#c84b2f', screen:'training' },
               { label:'Supply items tracked',   value:stats.lowSupplies,     color:'#2a6049', screen:'home'     },
             ].map(s => (
