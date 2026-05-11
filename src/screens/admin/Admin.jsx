@@ -89,13 +89,21 @@ function ModuleImagesPanel() {
                   </div>
                 )}
               </div>
-              <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{def.label}</div>
-                <button className="btn btn-sm btn-primary" disabled={isUploading} onClick={() => fileRefs.current[def.key]?.click()}>
-                  {currentUrl ? 'Replace' : 'Upload'}
-                </button>
-                <input type="file" accept="image/*" ref={el => fileRefs.current[def.key] = el} style={{ display: 'none' }}
-                  onChange={e => { handleUpload(def, e.target.files[0]) }} />
+              <div style={{ padding: '10px 12px 8px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{def.label}</div>
+                  <button className="btn btn-sm btn-primary" disabled={isUploading} onClick={() => fileRefs.current[def.key]?.click()}>
+                    {currentUrl ? 'Replace' : 'Upload'}
+                  </button>
+                  <input type="file" accept="image/*" ref={el => fileRefs.current[def.key] = el} style={{ display: 'none' }}
+                    onChange={e => { handleUpload(def, e.target.files[0]) }} />
+                </div>
+                {currentUrl && (
+                  <a href={currentUrl} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: 10, color: 'var(--accent)', textDecoration: 'underline', wordBreak: 'break-all', lineHeight: 1.4 }}>
+                    Test image URL ↗
+                  </a>
+                )}
               </div>
             </div>
           )

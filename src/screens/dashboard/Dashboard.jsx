@@ -72,15 +72,15 @@ function ExternalLinkModal({ url, onConfirm, onCancel }) {
 }
 
 function ModuleCard({ m, onClick, imgUrl, isAdminManage }) {
-  const [imgOk, setImgOk] = useState(false)
-  const hasImg = imgOk
+  const [imgErr, setImgErr] = useState(false)
+  const hasImg = !!(imgUrl && !imgErr)
   return (
     <div onClick={onClick}
       style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', cursor: 'pointer', border: isAdminManage ? '1px dashed var(--border)' : '1px solid var(--border)', transition: 'all 0.15s', position: 'relative', height: 160 }}
       onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.12)' }}
       onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}>
       <div style={{ position: 'absolute', inset: 0, background: m.bg, pointerEvents: 'none' }} />
-      {imgUrl && <img src={imgUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none', display: hasImg ? 'block' : 'none' }} onLoad={() => setImgOk(true)} onError={() => setImgOk(false)} />}
+      {imgUrl && !imgErr && <img src={imgUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} onError={() => setImgErr(true)} />}
       <div style={{ position: 'absolute', inset: 0, background: hasImg ? 'linear-gradient(to top, rgba(0,0,0,0.72) 40%, rgba(0,0,0,0.1) 100%)' : 'linear-gradient(to top, rgba(0,0,0,0.15) 0%, transparent 100%)', pointerEvents: 'none' }} />
       {m.external && <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: 10, borderRadius: 4, padding: '2px 6px', pointerEvents: 'none' }}>↗ External</div>}
       {isAdminManage && <div style={{ position: 'absolute', top: 10, right: 10, background: m.color, color: '#fff', fontSize: 10, borderRadius: 4, padding: '2px 8px', fontWeight: 600, pointerEvents: 'none' }}>⚙ Edit</div>}
