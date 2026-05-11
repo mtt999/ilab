@@ -352,7 +352,7 @@ export default function Dashboard() {
     return base
   })()
   // Screens not managed by user_screen_access (always allowed if in activeModules)
-  const UNMANAGED_SCREENS = new Set(['profile', 'dashboard', 'pm', 'barcode'])
+  const UNMANAGED_SCREENS = new Set(['profile', 'dashboard', 'pm', 'barcode', 'orgadmin'])
   const modules = userAccess
     ? allModules.filter(m => m.external || !m.screen || UNMANAGED_SCREENS.has(m.screen) || userAccess.has(m.screen))
     : allModules
@@ -415,6 +415,21 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {isAdmin && (
+        <div
+          onClick={() => setScreen('orgadmin')}
+          style={{ display:'flex', alignItems:'center', gap:12, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'14px 20px', marginBottom:20, cursor:'pointer', transition:'all 0.15s' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = '#1D9E75'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(29,158,117,0.12)' }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}>
+          <div style={{ fontSize:28 }}>⚙️</div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontWeight:600, fontSize:14, color:'var(--text)' }}>Admin Panel</div>
+            <div style={{ fontSize:12, color:'var(--text3)' }}>Manage users, access control & organization settings</div>
+          </div>
+          <div style={{ fontSize:12, color:'var(--text3)' }}>→</div>
+        </div>
+      )}
 
       {isStudent && view==='dashboard' && <StudentDashboardView session={session} onNavigate={s=>setScreen(s)} mileageUrl={mileageUrl} moduleImages={moduleImages} activeModules={activeModules} />}
       {isStudent && view==='grid'      && <CardGridView modules={modules} onNavigate={s=>setScreen(s)} mileageUrl={mileageUrl} labSafetyUrl={labSafetyUrl} isAdmin={false} onEditUrl={()=>{}} moduleImages={moduleImages} isStudent={true} activeModules={activeModules} />}

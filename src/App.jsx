@@ -25,6 +25,7 @@ import ForcePasswordChange from './components/ForcePasswordChange'
 import BarcodeScannerScreen from './screens/barcode/BarcodeScannerScreen'
 import BarcodeManager from './screens/barcode/BarcodeManager'
 import EquipmentScan from './screens/equipment/EquipmentScan'
+import Admin from './screens/admin/Admin'
 
 // Detect if we're on the /admin route
 const IS_ADMIN_ROUTE = window.location.pathname.endsWith('/admin') || window.location.pathname.endsWith('/admin/')
@@ -130,7 +131,7 @@ export default function App() {
     }
     if (screen === 'pm' && session?.role === 'student') setScreen('dashboard')
     // equipmentscan, barcodeqr, barcode bypass per-user access control
-    const INTERNAL = new Set(['dashboard', 'profile', 'inspection', 'results', 'project-detail', 'pm', 'barcode', 'equipmentscan', 'barcodeqr'])
+    const INTERNAL = new Set(['dashboard', 'profile', 'inspection', 'results', 'project-detail', 'pm', 'barcode', 'equipmentscan', 'barcodeqr', 'orgadmin'])
     if ((session?.role === 'user' || session?.role === 'admin') && userAccess && !INTERNAL.has(screen)) {
       if (!userAccess.has(screen)) setScreen('dashboard')
     }
@@ -168,6 +169,7 @@ export default function App() {
     barcode: <BarcodeScannerScreen />,
     barcodeqr: <BarcodeManager />,
     equipmentscan: <EquipmentScan />,
+    orgadmin: <Admin />,
   }
 
   return (
