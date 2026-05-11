@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="512" height="512" viewBox="0 0 512 512"
+   version="1.1"
+   xmlns="http://www.w3.org/2000/svg">
+  <polygon points="256,4 468,126 468,378 256,500 44,378 44,126" fill="#ffb380"/>
+  <polygon points="256,12 460,131 460,373 256,492 52,373 52,131" fill="#ff7f2a"/>
+  <polygon points="256,30 450,140 450,362 256,472 62,362 62,140" fill="#000080"/>
+  <polygon points="256,58 422,152 422,350 256,444 90,350 90,152" fill="none" stroke="#ff6b00" stroke-width="1.2" opacity="0.18"/>
+  <circle cx="256" cy="30"  r="9" fill="#ff6b00"/>
+  <circle cx="450" cy="140" r="9" fill="#ff6b00"/>
+  <circle cx="450" cy="362" r="9" fill="#ff6b00"/>
+  <circle cx="256" cy="472" r="9" fill="#ff6b00"/>
+  <circle cx="62"  cy="362" r="9" fill="#ff6b00"/>
+  <circle cx="62"  cy="140" r="9" fill="#ff6b00"/>
+  <ellipse cx="256" cy="224" rx="138" ry="44" fill="none" stroke="#ff6b00" stroke-width="3.5" opacity="0.95"/>
+  <circle cx="394" cy="224" r="16" fill="#ff6b00"/>
+  <ellipse cx="256" cy="224" rx="138" ry="44" fill="none" stroke="#ff9a3c" stroke-width="3" opacity="0.85" transform="rotate(60 256 224)"/>
+  <circle cx="179.16718" cy="294.86069" r="15" fill="#ff9a3c"/>
+  <ellipse cx="256" cy="224" rx="138" ry="44" fill="none" stroke="#ffba6e" stroke-width="2.5" opacity="0.75" transform="rotate(-60 256 224)"/>
+  <circle cx="325" cy="105" r="14" fill="#ffba6e"/>
+  <circle cx="256" cy="224" r="38" fill="#ff6b00" opacity="0.10"/>
+  <circle cx="256" cy="224" r="26" fill="#ff6b00" opacity="0.22"/>
+  <circle cx="256" cy="224" r="16" fill="#ff8c00" opacity="0.80"/>
+  <circle cx="256" cy="224" r="9"  fill="#ffb347"/>
+  <text x="256" y="415" text-anchor="middle" font-family="Arial, sans-serif" font-size="92px" font-weight="700">
+    <tspan font-style="italic" fill="#ff6b00">i</tspan>
+    <tspan fill="#ffffff" dx="-5">Lab</tspan>
+  </text>
+</svg>
