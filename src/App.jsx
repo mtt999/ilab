@@ -100,11 +100,17 @@ export default function App() {
         return
       }
       if (loginMode === 'solo') {
-        const { data } = await sb.from('solo_users').select('has_set_dashboard').eq('id', userId).maybeSingle()
-        setShowIconPicker(data?.has_set_dashboard !== true)
+        const { data } = await sb.from('solo_users').select('active_modules').eq('id', userId).limit(1)
+        const row = data?.[0]
+        // Show picker only if user has never saved any modules (no row or null/empty array)
+        const hasSaved = row && Array.isArray(row.active_modules) && row.active_modules.length > 0
+        setShowIconPicker(!hasSaved)
       } else {
-        const { data } = await sb.from('user_dashboard_prefs').select('has_set_dashboard').eq('user_id', userId).order('created_at', { ascending: false }).limit(1)
-        setShowIconPicker(data?.[0]?.has_set_dashboard !== true)
+        const { data } = await sb.from('user_dashboard_prefs').select('active_modules').eq('user_id', userId).order('created_at', { ascending: false }).limit(1)
+        const row = data?.[0]
+        // Show picker only if user has never saved any modules (no row or null/empty array)
+        const hasSaved = row && Array.isArray(row.active_modules) && row.active_modules.length > 0
+        setShowIconPicker(!hasSaved)
       }
     } catch (e) {
       setShowIconPicker(false)
