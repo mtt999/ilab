@@ -189,6 +189,10 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [showSignUp, setShowSignUp] = useState(false)
   const [signUpSuccess, setSignUpSuccess] = useState(false)
+  const [showHelpLookup, setShowHelpLookup] = useState(false)
+  const [helpEmail, setHelpEmail] = useState('')
+  const [helpResult, setHelpResult] = useState(null)
+  const [helpLoading, setHelpLoading] = useState(false)
 
   const accentColor = mode === 'solo' ? '#534AB7' : '#0d47a1'
 
@@ -201,6 +205,16 @@ export default function Login() {
     setIdentifier(newUser.email)
     setShowSignUp(false)
     setSignUpSuccess(true)
+  }
+
+  async function findOrgContact() {
+    if (!helpEmail.trim()) return
+    setHelpLoading(true); setHelpResult(null)
+    const { data: user } = await sb.from('users').select('organization_id').ilike('email', helpEmail.trim()).maybeSingle()
+    if (!user?.organization_id) { setHelpResult({ notFound: true }); setHelpLoading(false); return }
+    const { data: org } = await sb.from('organizations').select('name, contact_name, contact_email').eq('id', user.organization_id).maybeSingle()
+    setHelpResult(org || { notFound: true })
+    setHelpLoading(false)
   }
 
   async function handleLogin(e) {
@@ -388,6 +402,54 @@ export default function Login() {
                   {loading ? 'Signing in…' : mode === 'team' ? 'Sign in to iLab Team' : mode === 'solo' ? 'Sign in to iLab Solo' : 'Select a login type above'}
                 </button>
               </form>
+
+              {mode === 'team' && (
+                <div style={{ marginTop: 16 }}>
+                  <button type="button" onClick={() => { setShowHelpLookup(v => !v); setHelpResult(null); setHelpEmail('') }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--text3)', padding: 0, width: '100%', textAlign: 'center' }}>
+                    {showHelpLookup ? '▲ Hide' : 'Need help logging in? Find your org contact →'}
+                  </button>
+                  {showHelpLookup && (
+                    <div style={{ marginTop: 12, background: 'var(--surface2)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--border)' }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 10 }}>Enter your email to find your organization's contact</div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input
+                          type="email"
+                          value={helpEmail}
+                          onChange={e => { setHelpEmail(e.target.value); setHelpResult(null) }}
+                          onKeyDown={e => e.key === 'Enter' && findOrgContact()}
+                          placeholder="your@email.com"
+                          style={{ flex: 1, fontSize: 13 }}
+                        />
+                        <button type="button" onClick={findOrgContact} disabled={helpLoading || !helpEmail.trim()}
+                          style={{ padding: '8px 14px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          {helpLoading ? '…' : 'Look up'}
+                        </button>
+                      </div>
+                      {helpResult && (
+                        <div style={{ marginTop: 12, padding: '12px 14px', borderRadius: 8, background: helpResult.notFound || !helpResult.contact_email ? 'var(--surface)' : '#E1F5EE', border: '1px solid var(--border)' }}>
+                          {helpResult.notFound || !helpResult.contact_email ? (
+                            <div style={{ fontSize: 12, color: 'var(--text3)' }}>
+                              {helpResult.notFound
+                                ? 'No account found with that email. Please check the address or contact your lab manager directly.'
+                                : `Your organization is ${helpResult.name}, but no contact email has been set yet. Please reach out to your lab manager.`}
+                            </div>
+                          ) : (
+                            <>
+                              <div style={{ fontSize: 11, color: '#085041', marginBottom: 4 }}>Your organization: <strong>{helpResult.name}</strong></div>
+                              <div style={{ fontWeight: 600, fontSize: 13, color: '#085041' }}>Contact: {helpResult.contact_name || 'Lab Manager'}</div>
+                              <a href={`mailto:${helpResult.contact_email}`}
+                                style={{ fontSize: 13, color: '#1D9E75', fontWeight: 500, display: 'block', marginTop: 2 }}>
+                                {helpResult.contact_email}
+                              </a>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {mode === 'solo' && !QR_SCAN_EQ && (
                 <div style={{ textAlign: 'center', marginTop: 14, fontSize: 12, color: 'var(--text3)' }}>

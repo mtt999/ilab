@@ -497,9 +497,77 @@ function NotificationPrefsPanel({ userId, role }) {
 // ══════════════════════════════════════════════════════════════
 // ADMIN PROFILE
 // ══════════════════════════════════════════════════════════════
+function OrgContactPanel({ session, toast }) {
+  const [org, setOrg] = useState(null)
+  const [form, setForm] = useState({ contact_name: '', contact_email: '' })
+  const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => { load() }, [])
+
+  async function load() {
+    if (!session?.organizationId) { setLoading(false); return }
+    const { data } = await sb.from('organizations').select('*').eq('id', session.organizationId).maybeSingle()
+    setOrg(data)
+    if (data) setForm({ contact_name: data.contact_name || '', contact_email: data.contact_email || '' })
+    setLoading(false)
+  }
+
+  async function save() {
+    if (!session?.organizationId) return
+    setSaving(true)
+    const { error } = await sb.from('organizations').update({
+      contact_name: form.contact_name.trim() || null,
+      contact_email: form.contact_email.trim().toLowerCase() || null,
+    }).eq('id', session.organizationId)
+    if (error) { toast('Error saving: ' + error.message); setSaving(false); return }
+    toast('Contact info saved ✓')
+    setSaving(false)
+  }
+
+  if (loading) return <div style={{ textAlign: 'center', padding: 40 }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
+
+  return (
+    <div className="card" style={{ maxWidth: 480 }}>
+      <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>🏢 Organization Contact Info</div>
+      <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 20 }}>
+        Set a contact name and email for your organization. Members who need help logging in will see this on the login page.
+      </div>
+      {org && (
+        <div style={{ background: 'var(--surface2)', borderRadius: 8, padding: '10px 14px', marginBottom: 20, fontSize: 13 }}>
+          <span style={{ color: 'var(--text3)' }}>Organization: </span>
+          <strong>{org.name}</strong>
+        </div>
+      )}
+      <div className="field">
+        <label>Contact person's name</label>
+        <input value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} placeholder="e.g. Dr. Smith" />
+      </div>
+      <div className="field">
+        <label>Contact email address</label>
+        <input type="email" value={form.contact_email} onChange={e => setForm(f => ({ ...f, contact_email: e.target.value }))} placeholder="admin@yourlab.edu" />
+        <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>This email will appear on the login page when a member of your organization asks for help.</div>
+      </div>
+      <button className="btn btn-primary" onClick={save} disabled={saving || !form.contact_email.trim()}>
+        {saving ? 'Saving…' : 'Save contact info'}
+      </button>
+    </div>
+  )
+}
+
 function AdminProfile() {
   const { session, toast } = useAppStore()
+  const isOrgAdmin = !!session?.userId   // false = super admin (userId null)
   const [adminTab, setAdminTab] = useState('admin')
+  const tabs = [
+    { key: 'admin',    label: '🔑 Admin Settings' },
+    { key: 'students', label: '👥 Lab Users' },
+    { key: 'staff',    label: '👨‍💼 Lab Managers' },
+    { key: 'icons',    label: '🖼️ Icon Images' },
+    { key: 'dashboard',label: '🎛️ Dashboard Icons' },
+    { key: 'notifs',   label: '🔔 Notifications' },
+    ...(isOrgAdmin ? [{ key: 'org', label: '🏢 Organization' }] : []),
+  ]
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -507,14 +575,7 @@ function AdminProfile() {
         <HelpPanel screen="profile" />
       </div>
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 24, overflowX: 'auto' }}>
-        {[
-          { key: 'admin',    label: '🔑 Admin Settings' },
-          { key: 'students', label: '👥 Lab Users' },
-          { key: 'staff',    label: '👨‍💼 Lab Managers' },
-          { key: 'icons',    label: '🖼️ Icon Images' },
-          { key: 'dashboard',label: '🎛️ Dashboard Icons' },
-          { key: 'notifs',   label: '🔔 Notifications' },
-        ].map(t => (
+        {tabs.map(t => (
           <button key={t.key} onClick={() => setAdminTab(t.key)}
             style={{ padding: '10px 24px', border: 'none', background: 'transparent', fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 500, cursor: 'pointer', color: adminTab === t.key ? 'var(--accent)' : 'var(--text2)', borderBottom: `2px solid ${adminTab === t.key ? 'var(--accent)' : 'transparent'}`, transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
             {t.label}
@@ -527,6 +588,7 @@ function AdminProfile() {
       {adminTab === 'icons'     && <IconImageManager toast={toast} />}
       {adminTab === 'dashboard' && <DashboardIconsPanel session={session} />}
       {adminTab === 'notifs'    && <NotificationPrefsPanel userId={session?.userId} role="admin" />}
+      {adminTab === 'org'       && <OrgContactPanel session={session} toast={toast} />}
     </div>
   )
 }
