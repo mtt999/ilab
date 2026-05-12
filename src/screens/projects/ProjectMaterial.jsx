@@ -335,7 +335,7 @@ function LinksPanel({ projects, readOnly, allowedNames }) {
             <label>Project *</label>
             <select value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}>
               <option value="">— Select project —</option>
-              {(allowedNames === null
+              {(session?.userId === null
                 ? projects
                 : projects.filter(p => p.pi_user_id === session?.userId || (p.student_ids || []).includes(session?.userId))
               ).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -582,7 +582,7 @@ function ResultsTab({ projects, session, allowedNames }) {
               <label>Project *</label>
               <select value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}>
                 <option value="">— Select project —</option>
-                {(allowedNames === null
+                {(session?.userId === null
                   ? projects
                   : projects.filter(p => p.pi_user_id === session?.userId || (p.student_ids || []).includes(session?.userId))
                 ).map(p => <option key={p.id} value={p.id}>{p.name || p.project_name}</option>)}
@@ -1202,7 +1202,7 @@ function DataAnalysis({ allowedNames }) {
                   <label>Project *</label>
                   <select value={addForm.project_id} onChange={e => setAddForm(f => ({ ...f, project_id: e.target.value }))}>
                     <option value="">— Select project —</option>
-                    {(allowedNames === null
+                    {(session?.userId === null
                       ? allProjects
                       : allProjects.filter(p => p.pi_user_id === session?.userId || (p.student_ids || []).includes(session?.userId))
                     ).map(p => <option key={p.id} value={p.id}>{p.project_id ? `${p.project_id} – ${p.name}` : p.name}</option>)}
