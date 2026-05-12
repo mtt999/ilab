@@ -270,7 +270,7 @@ function LinksPanel({ projects, readOnly, allowedNames }) {
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { if (allowedNames !== null) loadLinks() }, [projects.length, allowedNames])
+  useEffect(() => { if (allowedNames !== undefined) loadLinks() }, [projects.length, allowedNames])
 
   async function loadLinks() {
     setLoading(true)
@@ -278,7 +278,8 @@ function LinksPanel({ projects, readOnly, allowedNames }) {
     if (!ids.length) { setLinks([]); setLoading(false); return }
     const { data } = await sb.from('project_links').select('*').in('project_id', ids).order('created_at', { ascending: false })
     const all = data || []
-    const visible = allowedNames?.size > 0
+    // null = admin (show all); Set = filter (keep !l.created_by for legacy links without attribution)
+    const visible = allowedNames !== null
       ? all.filter(l => !l.created_by || allowedNames.has(l.created_by))
       : all
     setLinks(visible)
@@ -447,7 +448,7 @@ function ResultsTab({ projects, session, allowedNames }) {
       .then(({ data }) => setEquipment(data || []))
   }, [])
 
-  useEffect(() => { if (allowedNames !== null) loadResults() }, [projects.length, allowedNames])
+  useEffect(() => { if (allowedNames !== undefined) loadResults() }, [projects.length, allowedNames])
 
   async function loadResults() {
     setLoading(true)
@@ -455,8 +456,8 @@ function ResultsTab({ projects, session, allowedNames }) {
     if (!ids.length) { setResults([]); setLoading(false); return }
     const { data } = await sb.from('test_result_entries').select('*').in('project_id', ids).order('created_at', { ascending: false })
     const all = data || []
-    const visible = allowedNames?.size > 0
-      ? all.filter(r => !r.created_by || allowedNames.has(r.created_by))
+    const visible = allowedNames !== null
+      ? all.filter(r => r.created_by && allowedNames.has(r.created_by))
       : all
     setResults(visible)
     setLoading(false)
@@ -522,7 +523,7 @@ function ResultsTab({ projects, session, allowedNames }) {
           file_url: urlData.publicUrl,
           file_size: uploadFile.size,
           file_type: uploadFile.type,
-          created_by: session?.username || session?.name || null,
+          created_by: session?.username || session?.email || null,
         })
         if (dbErr) toast('File uploaded but record save failed: ' + (dbErr.message || 'Run the project_record_files SQL migration.'))
       }
@@ -1014,15 +1015,15 @@ function DataAnalysis({ allowedNames }) {
   }, [])
 
   useEffect(() => {
-    if (!selected || allowedNames === null) return
+    if (!selected || allowedNames === undefined) return
     setLoadingRes(true)
     Promise.all([
       sb.from('test_result_entries').select('*').eq('equipment_id', selected.id).order('date', { ascending: true }),
       sb.from('analysis_comments').select('*').eq('equipment_id', selected.id).order('created_at', { ascending: true }),
     ]).then(([r, c]) => {
       const all = r.data || []
-      const visible = allowedNames.size > 0
-        ? all.filter(row => !row.created_by || allowedNames.has(row.created_by))
+      const visible = allowedNames !== null
+        ? all.filter(row => row.created_by && allowedNames.has(row.created_by))
         : all
       setResults(visible)
       setComments(c.data || [])
@@ -1045,7 +1046,7 @@ function DataAnalysis({ allowedNames }) {
       result_value: addForm.result_value !== '' ? String(addForm.result_value) : null,
       explanation: addForm.description.trim() || null,
       date: addForm.result_date || null,
-      created_by: session?.username || null,
+      created_by: session?.username || session?.email || null,
     }
     const { data: saved, error } = await sb.from('test_result_entries').insert(payload).select('id').single()
     if (error) { toast('Save failed: ' + error.message); setAddSaving(false); return }
@@ -1066,7 +1067,7 @@ function DataAnalysis({ allowedNames }) {
           file_url: urlData.publicUrl,
           file_size: uploadFile.size,
           file_type: uploadFile.type,
-          created_by: session?.username || null,
+          created_by: session?.username || session?.email || null,
         })
       }
     }
@@ -1080,8 +1081,8 @@ function DataAnalysis({ allowedNames }) {
     // Reload results (apply same privacy filter)
     const { data: fresh } = await sb.from('test_result_entries').select('*').eq('equipment_id', selected.id).order('date', { ascending: true })
     const all = fresh || []
-    const visible = allowedNames?.size > 0
-      ? all.filter(row => !row.created_by || allowedNames.has(row.created_by))
+    const visible = allowedNames !== null
+      ? all.filter(row => row.created_by && allowedNames.has(row.created_by))
       : all
     setResults(visible)
   }
@@ -1394,7 +1395,7 @@ function RecordsPanel({ projects, allowedNames }) {
     sb.from('equipment_inventory').select('id, equipment_name').then(({ data }) => setEquipment(data || []))
   }, [])
 
-  useEffect(() => { if (allowedNames !== null) loadData() }, [projects.length, allowedNames])
+  useEffect(() => { if (allowedNames !== undefined) loadData() }, [projects.length, allowedNames])
 
   async function loadData() {
     setLoading(true)
@@ -1405,8 +1406,8 @@ function RecordsPanel({ projects, allowedNames }) {
       sb.from('project_record_files').select('*').in('project_id', ids),
     ])
     const all = rows || []
-    const visible = allowedNames?.size > 0
-      ? all.filter(r => !r.created_by || allowedNames.has(r.created_by))
+    const visible = allowedNames !== null
+      ? all.filter(r => r.created_by && allowedNames.has(r.created_by))
       : all
     setEntries(visible)
     const fm = {}
@@ -1781,7 +1782,7 @@ export default function ProjectMaterial() {
   const isSolo = session?.loginMode === 'solo'
   const [mainTab, setMainTab] = useState('inventory')
   const [allProjects, setAllProjects] = useState([])
-  const [allowedNames, setAllowedNames] = useState(null) // null = loading; Set = ready
+  const [allowedNames, setAllowedNames] = useState(undefined) // undefined = loading; null = admin (no filter); Set = filtered
 
   const accentColor = isSolo ? '#534AB7' : 'var(--accent)'
 
@@ -1789,8 +1790,10 @@ export default function ProjectMaterial() {
   // Results, records and links are filtered to only this set.
   useEffect(() => {
     async function loadAllowedNames() {
+      // Admins see everything — null means "no filter, show all"
+      if (session?.role === 'admin') { setAllowedNames(null); return }
       const myIds = [session?.username, session?.name, session?.email].filter(Boolean)
-      if (!session?.userId || myIds.length === 0) { setAllowedNames(new Set()); return }
+      if (!session?.userId || myIds.length === 0) { setAllowedNames(new Set()); return } // empty = block all
       const names = new Set(myIds)
       if (!isSolo) {
         const [{ data: asOwner }, { data: asMember }] = await Promise.all([
