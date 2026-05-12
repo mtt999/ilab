@@ -51,7 +51,6 @@ function ProjectInfo({ project, users, onSaved, isSolo, readOnly }) {
   }
 
   const piUser = users.find(u => u.id === project.pi_user_id)
-  const studentUsers = users.filter(u => (project.student_ids || []).includes(u.id))
   const statusBadge = project.status === 'active' ? 'badge-active' : project.status === 'completed' ? 'badge-completed' : 'badge-hold'
 
   if (editing) return (
@@ -82,24 +81,12 @@ function ProjectInfo({ project, users, onSaved, isSolo, readOnly }) {
         </select>
       </div>
       {!isSolo && (
-        <>
-          <div className="field"><label>Principal Investigator (PI)</label>
-            <select value={form.pi_user_id} onChange={e => setForm(f => ({ ...f, pi_user_id: e.target.value }))}>
-              <option value="">— Select PI —</option>
-              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
-          </div>
-          <div className="field"><label>Lab Users</label>
-            <div style={{ background: 'var(--surface2)', borderRadius: 'var(--radius)', padding: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 8 }}>
-              {users.map(u => (
-                <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, marginBottom: 0, background: 'var(--surface)', borderRadius: 6, padding: '6px 10px', border: form.student_ids.includes(u.id) ? '1px solid var(--accent)' : '1px solid var(--border)' }}>
-                  <input type="checkbox" checked={form.student_ids.includes(u.id)} onChange={() => toggleStudent(u.id)} style={{ width: 'auto', cursor: 'pointer' }} />
-                  <span>{u.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </>
+        <div className="field"><label>Principal Investigator (PI)</label>
+          <select value={form.pi_user_id} onChange={e => setForm(f => ({ ...f, pi_user_id: e.target.value }))}>
+            <option value="">— Select PI —</option>
+            {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+          </select>
+        </div>
       )}
       <div className="grid-2">
         <div className="field"><label>Sampling Date</label><input type="date" value={form.sampling_date} onChange={e => setForm(f => ({ ...f, sampling_date: e.target.value }))} /></div>
@@ -123,18 +110,11 @@ function ProjectInfo({ project, users, onSaved, isSolo, readOnly }) {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
         {!isSolo && <InfoCell label="Principal Investigator" value={piUser?.name} />}
+        {!isSolo && <InfoCell label="Project Group" value={project.project_group || '—'} />}
         <InfoCell label="Created" value={new Date(project.created_at).toLocaleDateString()} />
         <InfoCell label="Sampling Date" value={project.sampling_date} />
         <InfoCell label="Storage Date" value={project.storage_date} />
       </div>
-      {!isSolo && studentUsers.length > 0 && (
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Lab Users</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {studentUsers.map(u => <span key={u.id} style={{ background: 'var(--accent3-light)', color: 'var(--accent3)', borderRadius: 99, padding: '5px 14px', fontSize: 13, fontWeight: 500 }}>👤 {u.name}</span>)}
-          </div>
-        </div>
-      )}
       {project.notes && (
         <div>
           <div style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Notes</div>
@@ -185,24 +165,12 @@ function NewProjectModal({ users, isSolo, soloOwnerId, onClose, onCreated }) {
         </select>
       </div>
       {!isSolo && (
-        <>
-          <div className="field"><label>Principal Investigator (PI)</label>
-            <select value={form.pi_user_id} onChange={e => setForm(f => ({ ...f, pi_user_id: e.target.value }))}>
-              <option value="">— Select PI —</option>
-              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
-          </div>
-          <div className="field"><label>Lab Users</label>
-            <div style={{ background: 'var(--surface2)', borderRadius: 'var(--radius)', padding: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8, maxHeight: 200, overflowY: 'auto' }}>
-              {users.map(u => (
-                <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, marginBottom: 0, background: 'var(--surface)', borderRadius: 6, padding: '6px 10px', border: form.student_ids.includes(u.id) ? '1px solid var(--accent)' : '1px solid var(--border)' }}>
-                  <input type="checkbox" checked={form.student_ids.includes(u.id)} onChange={() => toggleStudent(u.id)} style={{ width: 'auto', cursor: 'pointer' }} />
-                  <span>{u.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </>
+        <div className="field"><label>Principal Investigator (PI)</label>
+          <select value={form.pi_user_id} onChange={e => setForm(f => ({ ...f, pi_user_id: e.target.value }))}>
+            <option value="">— Select PI —</option>
+            {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+          </select>
+        </div>
       )}
       <div className="grid-2">
         <div className="field"><label>Sampling Date</label><input type="date" value={form.sampling_date} onChange={e => setForm(f => ({ ...f, sampling_date: e.target.value }))} /></div>
