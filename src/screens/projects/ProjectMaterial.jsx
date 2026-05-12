@@ -1790,8 +1790,10 @@ export default function ProjectMaterial() {
   // Results, records and links are filtered to only this set.
   useEffect(() => {
     async function loadAllowedNames() {
-      // Admins see everything — null means "no filter, show all"
-      if (session?.role === 'admin') { setAllowedNames(null); return }
+      // Only true org admins (dbRole==='admin' in DB, or super admin userId===null) bypass the filter.
+      // Lab managers promoted to role='admin' via adminLevel still get filtered — they should only see their own data.
+      const isTrueAdmin = session?.userId === null || session?.dbRole === 'admin'
+      if (isTrueAdmin) { setAllowedNames(null); return }
       const myIds = [session?.username, session?.name, session?.email].filter(Boolean)
       if (!session?.userId || myIds.length === 0) { setAllowedNames(new Set()); return } // empty = block all
       const names = new Set(myIds)

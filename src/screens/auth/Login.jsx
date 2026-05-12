@@ -269,7 +269,7 @@ export default function Login() {
       const adminLevel = user.admin_level || 0
       const role = user.role === 'admin' || adminLevel >= 1 ? 'admin' : user.role
       const teamSessionObj = {
-        role, username: user.name, userId: user.id, email: user.email,
+        role, dbRole: user.role, username: user.name, userId: user.id, email: user.email,
         adminLevel, photoUrl: user.photo_url, avatar: user.avatar,
         loginMode: 'team',
         organizationId: user.organization_id || null,
