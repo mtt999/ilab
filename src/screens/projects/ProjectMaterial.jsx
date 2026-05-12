@@ -1,5 +1,5 @@
 import HelpPanel from '../../components/HelpPanel'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { sb } from '../../lib/supabase'
 import { useAppStore } from '../../store/useAppStore'
 import Modal from '../../components/Modal'
@@ -348,10 +348,7 @@ function LinksPanel({ projects, readOnly, allowedNames }) {
             <label>Project *</label>
             <select value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}>
               <option value="">— Select project —</option>
-              {(session?.userId === null || !session?.projectGroup
-                ? projects
-                : projects.filter(p => !p.project_group || p.project_group === session.projectGroup)
-              ).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
           <div className="grid-2">
@@ -595,10 +592,7 @@ function ResultsTab({ projects, session, allowedNames }) {
               <label>Project *</label>
               <select value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}>
                 <option value="">— Select project —</option>
-                {(session?.userId === null
-                  ? projects
-                  : projects.filter(p => p.pi_user_id === session?.userId || (p.student_ids || []).includes(session?.userId))
-                ).map(p => <option key={p.id} value={p.id}>{p.name || p.project_name}</option>)}
+                {projects.map(p => <option key={p.id} value={p.id}>{p.name || p.project_name}</option>)}
               </select>
             </div>
             <div className="field">
@@ -1001,7 +995,7 @@ function PointChart({ results, isOutlier }) {
 }
 
 // ── Data Analysis ─────────────────────────────────────────────
-function DataAnalysis({ allowedNames }) {
+function DataAnalysis({ allowedNames, userProjectGroup }) {
   const { session, toast } = useAppStore()
   const [equipment, setEquipment]   = useState([])
   const [selected, setSelected]     = useState(null)
@@ -1215,9 +1209,9 @@ function DataAnalysis({ allowedNames }) {
                   <label>Project *</label>
                   <select value={addForm.project_id} onChange={e => setAddForm(f => ({ ...f, project_id: e.target.value }))}>
                     <option value="">— Select project —</option>
-                    {(session?.userId === null || !session?.projectGroup
+                    {(session?.userId === null || !userProjectGroup
                       ? allProjects
-                      : allProjects.filter(p => !p.project_group || p.project_group === session.projectGroup)
+                      : allProjects.filter(p => !p.project_group || p.project_group === userProjectGroup)
                     ).map(p => <option key={p.id} value={p.id}>{p.project_id ? `${p.project_id} – ${p.name}` : p.name}</option>)}
                   </select>
                 </div>
@@ -1573,7 +1567,7 @@ function RecordsPanel({ projects, allowedNames }) {
 }
 
 // ── Workspace Tab (members / data analysis / links) ────────────
-function WorkspaceTab({ session, projects, isSolo, readOnly, allowedNames }) {
+function WorkspaceTab({ session, projects, isSolo, readOnly, allowedNames, userProjectGroup }) {
   const [wsTab, setWsTab] = useState('members')
 
   const wsTabs = [
@@ -1600,7 +1594,7 @@ function WorkspaceTab({ session, projects, isSolo, readOnly, allowedNames }) {
           : <TeamMembersPanel session={session} />
       )}
 
-      {wsTab === 'analysis' && <DataAnalysis allowedNames={allowedNames} />}
+      {wsTab === 'analysis' && <DataAnalysis allowedNames={allowedNames} userProjectGroup={userProjectGroup} />}
 
       {wsTab === 'records' && <RecordsPanel projects={projects} allowedNames={allowedNames} />}
 
@@ -1805,8 +1799,16 @@ export default function ProjectMaterial() {
   const [mainTab, setMainTab] = useState('inventory')
   const [allProjects, setAllProjects] = useState([])
   const [allowedNames, setAllowedNames] = useState(undefined) // undefined = loading; null = admin (no filter); Set = filtered
+  const [userProjectGroup, setUserProjectGroup] = useState(undefined) // undefined = loading; null = no group; string = group name
 
   const accentColor = isSolo ? '#534AB7' : 'var(--accent)'
+
+  // Fetch the current user's project_group directly from DB — don't rely on session (may be stale)
+  useEffect(() => {
+    if (!session?.userId) { setUserProjectGroup(null); return }
+    sb.from('users').select('project_group').eq('id', session.userId).single()
+      .then(({ data }) => setUserProjectGroup(data?.project_group || null))
+  }, [session?.userId])
 
   // Build the set of name/email identifiers for the current user + their teammates.
   // Results, records and links are filtered to only this set.
@@ -1858,6 +1860,14 @@ export default function ProjectMaterial() {
 
   const viewingShared = isSolo && !!viewingWorkspaceOwnerId
 
+  // Projects filtered to only those matching the current user's project group.
+  // userProjectGroup===undefined means still loading — use full list to avoid flash of empty dropdown.
+  // null means user has no group assigned — show all projects.
+  const assignedProjects = useMemo(() => {
+    if (session?.userId === null || !userProjectGroup || userProjectGroup === undefined) return allProjects
+    return allProjects.filter(p => !p.project_group || p.project_group === userProjectGroup)
+  }, [allProjects, userProjectGroup, session?.userId])
+
   const mainTabs = [
     { key: 'inventory', label: '📦 Material Inventory' },
     { key: 'results',   label: '✏️ Project Test Results' },
@@ -1886,11 +1896,11 @@ export default function ProjectMaterial() {
       )}
 
       {mainTab === 'results' && (
-        <ResultsTab projects={allProjects} session={session} allowedNames={allowedNames} />
+        <ResultsTab projects={assignedProjects} session={session} allowedNames={allowedNames} />
       )}
 
       {mainTab === 'workspace' && (
-        <WorkspaceTab session={session} projects={allProjects} isSolo={isSolo} readOnly={viewingShared} allowedNames={allowedNames} />
+        <WorkspaceTab session={session} projects={assignedProjects} isSolo={isSolo} readOnly={viewingShared} allowedNames={allowedNames} userProjectGroup={userProjectGroup} />
       )}
     </div>
   )
