@@ -1,0 +1,1821 @@
+import HelpPanel from '../../components/HelpPanel'
+import { useState, useEffect, useRef } from 'react'
+import { sb } from '../../lib/supabase'
+import { useAppStore } from '../../store/useAppStore'
+import Modal from '../../components/Modal'
+import TeammatesPanel from '../../components/TeammatesPanel'
+import TeamMembersPanel from '../../components/TeamMembersPanel'
+import ProjectMaterials from './ProjectMaterials'
+import MaterialStorage from '../storage/MaterialStorage'
+import ProjectDatabase from './ProjectDatabase'
+
+// ── Helpers ────────────────────────────────────────────────────
+function InfoCell({ label, value }) {
+  return (
+    <div>
+      <div style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{label}</div>
+      <div style={{ fontWeight: 500 }}>{value || '—'}</div>
+    </div>
+  )
+}
+
+// ── Project Info (view/edit a project's metadata) ──────────────
+function ProjectInfo({ project, users, onSaved, isSolo, readOnly }) {
+  const { toast } = useAppStore()
+  const [editing, setEditing] = useState(false)
+  const [form, setForm] = useState({
+    name: project.name || '', project_id: project.project_id || '',
+    cfop: project.cfop || '', status: project.status || 'active',
+    pi_user_id: project.pi_user_id || '', student_ids: project.student_ids || [],
+    sampling_date: project.sampling_date || '', storage_date: project.storage_date || '',
+    notes: project.notes || '',
+  })
+
+  useEffect(() => {
+    setForm({ name: project.name || '', project_id: project.project_id || '', cfop: project.cfop || '', status: project.status || 'active', pi_user_id: project.pi_user_id || '', student_ids: project.student_ids || [], sampling_date: project.sampling_date || '', storage_date: project.storage_date || '', notes: project.notes || '' })
+    setEditing(false)
+  }, [project.id])
+
+  function toggleStudent(id) {
+    setForm(f => ({ ...f, student_ids: f.student_ids.includes(id) ? f.student_ids.filter(s => s !== id) : [...f.student_ids, id] }))
+  }
+
+  async function save() {
+    if (!form.name.trim()) { toast('Project name is required.'); return }
+    if (!form.project_id.trim()) { toast('Project title is required.'); return }
+    const payload = { name: form.name.trim(), project_id: form.project_id.trim(), cfop: form.cfop.trim() || null, status: form.status, pi_user_id: form.pi_user_id || null, student_ids: form.student_ids, sampling_date: form.sampling_date || null, storage_date: form.storage_date || null, notes: form.notes.trim() || null }
+    const { error } = await sb.from('projects').update(payload).eq('id', project.id)
+    if (error) { toast('Error saving project.'); return }
+    toast('Project info saved.'); setEditing(false); onSaved()
+  }
+
+  const piUser = users.find(u => u.id === project.pi_user_id)
+  const studentUsers = users.filter(u => (project.student_ids || []).includes(u.id))
+  const statusBadge = project.status === 'active' ? 'badge-active' : project.status === 'completed' ? 'badge-completed' : 'badge-hold'
+
+  if (editing) return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div style={{ fontWeight: 600, fontSize: 15 }}>Edit project info</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-sm btn-primary" onClick={save}>Save</button>
+          <button className="btn btn-sm" onClick={() => setEditing(false)}>Cancel</button>
+        </div>
+      </div>
+      <div className="grid-2">
+        <div className="field"><label>Project Name *</label><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
+        <div className="field"><label>Project Title *</label><input value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))} /></div>
+      </div>
+      <div className="grid-2">
+        <div className="field"><label>CFOP (Funding Code)</label><input value={form.cfop} onChange={e => setForm(f => ({ ...f, cfop: e.target.value }))} /></div>
+        <div className="field"><label>Status</label>
+          <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+            <option value="active">Active</option><option value="on hold">On Hold</option><option value="completed">Completed</option>
+          </select>
+        </div>
+      </div>
+      {!isSolo && (
+        <>
+          <div className="field"><label>Principal Investigator (PI)</label>
+            <select value={form.pi_user_id} onChange={e => setForm(f => ({ ...f, pi_user_id: e.target.value }))}>
+              <option value="">— Select PI —</option>
+              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          </div>
+          <div className="field"><label>Lab Users</label>
+            <div style={{ background: 'var(--surface2)', borderRadius: 'var(--radius)', padding: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 8 }}>
+              {users.map(u => (
+                <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, marginBottom: 0, background: 'var(--surface)', borderRadius: 6, padding: '6px 10px', border: form.student_ids.includes(u.id) ? '1px solid var(--accent)' : '1px solid var(--border)' }}>
+                  <input type="checkbox" checked={form.student_ids.includes(u.id)} onChange={() => toggleStudent(u.id)} style={{ width: 'auto', cursor: 'pointer' }} />
+                  <span>{u.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+      <div className="grid-2">
+        <div className="field"><label>Sampling Date</label><input type="date" value={form.sampling_date} onChange={e => setForm(f => ({ ...f, sampling_date: e.target.value }))} /></div>
+        <div className="field"><label>Storage Date</label><input type="date" value={form.storage_date} onChange={e => setForm(f => ({ ...f, storage_date: e.target.value }))} /></div>
+      </div>
+      <div className="field"><label>Notes</label><textarea rows={3} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} style={{ resize: 'vertical' }} /></div>
+    </div>
+  )
+
+  return (
+    <div>
+      {!readOnly && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+          <button className="btn btn-sm" onClick={() => setEditing(true)}>✏️ Edit info</button>
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
+        <span className={`badge ${statusBadge}`} style={{ fontSize: 12, padding: '4px 12px' }}>{project.status}</span>
+        {project.project_id && <span style={{ fontFamily: 'var(--mono)', fontSize: 12, background: 'var(--surface2)', padding: '4px 12px', borderRadius: 99, color: 'var(--text2)' }}>Title: {project.project_id}</span>}
+        {project.cfop && <span style={{ fontFamily: 'var(--mono)', fontSize: 12, background: 'var(--accent-light)', padding: '4px 12px', borderRadius: 99, color: 'var(--accent)' }}>CFOP: {project.cfop}</span>}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+        {!isSolo && <InfoCell label="Principal Investigator" value={piUser?.name} />}
+        <InfoCell label="Created" value={new Date(project.created_at).toLocaleDateString()} />
+        <InfoCell label="Sampling Date" value={project.sampling_date} />
+        <InfoCell label="Storage Date" value={project.storage_date} />
+      </div>
+      {!isSolo && studentUsers.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Lab Users</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {studentUsers.map(u => <span key={u.id} style={{ background: 'var(--accent3-light)', color: 'var(--accent3)', borderRadius: 99, padding: '5px 14px', fontSize: 13, fontWeight: 500 }}>👤 {u.name}</span>)}
+          </div>
+        </div>
+      )}
+      {project.notes && (
+        <div>
+          <div style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Notes</div>
+          <div style={{ background: 'var(--surface2)', borderRadius: 'var(--radius)', padding: 14, fontSize: 14, color: 'var(--text2)', lineHeight: 1.6 }}>{project.notes}</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── New Project Modal ──────────────────────────────────────────
+function NewProjectModal({ users, isSolo, soloOwnerId, onClose, onCreated }) {
+  const { toast } = useAppStore()
+  const [form, setForm] = useState({ name: '', project_id: '', cfop: '', status: 'active', pi_user_id: '', student_ids: [], sampling_date: '', storage_date: '', notes: '' })
+
+  function toggleStudent(id) {
+    setForm(f => ({ ...f, student_ids: f.student_ids.includes(id) ? f.student_ids.filter(s => s !== id) : [...f.student_ids, id] }))
+  }
+
+  async function create() {
+    if (!form.name.trim()) { toast('Project name is required.'); return }
+    if (!form.project_id.trim()) { toast('Project title is required.'); return }
+    const payload = { name: form.name.trim(), project_id: form.project_id.trim(), cfop: form.cfop.trim() || null, status: form.status, pi_user_id: form.pi_user_id || null, student_ids: form.student_ids, sampling_date: form.sampling_date || null, storage_date: form.storage_date || null, notes: form.notes.trim() || null, solo_owner_id: soloOwnerId || null, organization_id: !soloOwnerId ? (session?.organizationId || null) : null }
+    const { data, error } = await sb.from('projects').insert(payload).select().single()
+    if (error) { toast('Error creating project.'); return }
+    toast('Project created!'); onCreated(data.id); onClose()
+  }
+
+  return (
+    <Modal onClose={onClose}>
+      <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 20 }}>New project</div>
+      <div className="grid-2">
+        <div className="field"><label>Project Name *</label><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} autoFocus /></div>
+        <div className="field"><label>Project Title *</label><input value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))} /></div>
+      </div>
+      <div className="grid-2">
+        <div className="field"><label>CFOP (Funding Code)</label><input value={form.cfop} onChange={e => setForm(f => ({ ...f, cfop: e.target.value }))} /></div>
+        <div className="field"><label>Status</label>
+          <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+            <option value="active">Active</option><option value="on hold">On Hold</option><option value="completed">Completed</option>
+          </select>
+        </div>
+      </div>
+      {!isSolo && (
+        <>
+          <div className="field"><label>Principal Investigator (PI)</label>
+            <select value={form.pi_user_id} onChange={e => setForm(f => ({ ...f, pi_user_id: e.target.value }))}>
+              <option value="">— Select PI —</option>
+              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          </div>
+          <div className="field"><label>Lab Users</label>
+            <div style={{ background: 'var(--surface2)', borderRadius: 'var(--radius)', padding: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8, maxHeight: 200, overflowY: 'auto' }}>
+              {users.map(u => (
+                <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, marginBottom: 0, background: 'var(--surface)', borderRadius: 6, padding: '6px 10px', border: form.student_ids.includes(u.id) ? '1px solid var(--accent)' : '1px solid var(--border)' }}>
+                  <input type="checkbox" checked={form.student_ids.includes(u.id)} onChange={() => toggleStudent(u.id)} style={{ width: 'auto', cursor: 'pointer' }} />
+                  <span>{u.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+      <div className="grid-2">
+        <div className="field"><label>Sampling Date</label><input type="date" value={form.sampling_date} onChange={e => setForm(f => ({ ...f, sampling_date: e.target.value }))} /></div>
+        <div className="field"><label>Storage Date</label><input type="date" value={form.storage_date} onChange={e => setForm(f => ({ ...f, storage_date: e.target.value }))} /></div>
+      </div>
+      <div className="field"><label>Notes</label><textarea rows={3} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} style={{ resize: 'vertical' }} /></div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button className={`btn ${isSolo ? 'btn-purple' : 'btn-primary'}`} onClick={create}>Create project</button>
+        <button className="btn" onClick={onClose}>Cancel</button>
+      </div>
+    </Modal>
+  )
+}
+
+// ── Submit Result Panel ────────────────────────────────────────
+function SubmitResultPanel({ projects, session }) {
+  const { toast } = useAppStore()
+  const [form, setForm] = useState({ project_id: '', result_type: '', description: '', result_date: '' })
+  const [saving, setSaving] = useState(false)
+
+  async function submit() {
+    if (!form.project_id) { toast('Select a project.'); return }
+    if (!form.description.trim()) { toast('Description is required.'); return }
+    setSaving(true)
+    const { error } = await sb.from('project_results').insert({
+      project_id: form.project_id,
+      submitted_by: session?.name || session?.email || 'Unknown',
+      result_type: form.result_type || null,
+      description: form.description.trim(),
+      result_date: form.result_date || null,
+    })
+    if (error) {
+      toast('Could not save. Run the SQL migration in Supabase first.')
+    } else {
+      toast('Result submitted!')
+      setForm({ project_id: '', result_type: '', description: '', result_date: '' })
+    }
+    setSaving(false)
+  }
+
+  return (
+    <div>
+      <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 16 }}>Submit Test Result</div>
+      <div className="card">
+        <div className="grid-2">
+          <div className="field">
+            <label>Project *</label>
+            <select value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}>
+              <option value="">— Select project —</option>
+              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label>Result Type</label>
+            <input value={form.result_type} onChange={e => setForm(f => ({ ...f, result_type: e.target.value }))} placeholder="e.g. Marshall Test, Density…" />
+          </div>
+        </div>
+        <div className="field">
+          <label>Description / Values *</label>
+          <textarea rows={4} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Test details, values, observations…" style={{ resize: 'vertical' }} />
+        </div>
+        <div className="field">
+          <label>Result Date</label>
+          <input type="date" value={form.result_date} onChange={e => setForm(f => ({ ...f, result_date: e.target.value }))} />
+        </div>
+        <button className="btn btn-primary" onClick={submit} disabled={saving}>{saving ? 'Submitting…' : 'Submit Result'}</button>
+      </div>
+    </div>
+  )
+}
+
+// ── Links Panel ────────────────────────────────────────────────
+function LinksPanel({ projects, readOnly }) {
+  const { toast } = useAppStore()
+  const [links, setLinks] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [form, setForm] = useState({ project_id: '', title: '', url: '' })
+  const [showForm, setShowForm] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => { loadLinks() }, [projects.length])
+
+  async function loadLinks() {
+    setLoading(true)
+    const ids = projects.map(p => p.id)
+    if (!ids.length) { setLinks([]); setLoading(false); return }
+    const { data } = await sb.from('project_links').select('*').in('project_id', ids).order('created_at', { ascending: false })
+    setLinks(data || [])
+    setLoading(false)
+  }
+
+  async function addLink() {
+    if (!form.project_id) { toast('Select a project.'); return }
+    if (!form.title.trim()) { toast('Title is required.'); return }
+    if (!form.url.trim()) { toast('URL is required.'); return }
+    setSaving(true)
+    const { error } = await sb.from('project_links').insert({
+      project_id: form.project_id,
+      title: form.title.trim(),
+      url: form.url.trim(),
+    })
+    if (error) {
+      toast('Could not save. Run the SQL migration in Supabase first.')
+    } else {
+      toast('Link added!')
+      setForm({ project_id: '', title: '', url: '' })
+      setShowForm(false)
+      loadLinks()
+    }
+    setSaving(false)
+  }
+
+  async function deleteLink(id) {
+    if (!confirm('Delete this link?')) return
+    await sb.from('project_links').delete().eq('id', id)
+    toast('Link deleted.')
+    loadLinks()
+  }
+
+  const projectMap = Object.fromEntries(projects.map(p => [p.id, p.name]))
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div style={{ fontWeight: 600, fontSize: 15 }}>Project Links</div>
+        {!readOnly && (
+          <button className="btn btn-sm btn-primary" onClick={() => setShowForm(s => !s)}>
+            {showForm ? 'Cancel' : '+ Add Link'}
+          </button>
+        )}
+      </div>
+
+      {showForm && (
+        <div className="card" style={{ marginBottom: 16, border: '1.5px solid var(--accent)' }}>
+          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>Add a project link</div>
+          <div className="field">
+            <label>Project *</label>
+            <select value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}>
+              <option value="">— Select project —</option>
+              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div className="grid-2">
+            <div className="field"><label>Title *</label><input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Lab Report, AASHTO Reference" /></div>
+            <div className="field"><label>URL *</label><input type="url" value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} placeholder="https://…" /></div>
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn btn-primary btn-sm" onClick={addLink} disabled={saving}>{saving ? 'Saving…' : 'Add Link'}</button>
+            <button className="btn btn-sm" onClick={() => setShowForm(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 32 }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
+      ) : links.length === 0 ? (
+        <div className="empty-state"><div className="empty-icon">🔗</div><div>No links added yet.</div></div>
+      ) : (
+        <div>
+          {links.map(l => (
+            <div key={l.id} className="card" style={{ marginBottom: 8, padding: '12px 16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 500, marginBottom: 2 }}>{projectMap[l.project_id] || '—'}</div>
+                  <a href={l.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)', textDecoration: 'none' }}>
+                    🔗 {l.title}
+                  </a>
+                  <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.url}</div>
+                </div>
+                {!readOnly && (
+                  <button className="btn btn-sm btn-danger" onClick={() => deleteLink(l.id)}>Delete</button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Adaptive result input ──────────────────────────────────────
+function ResultValueInput({ type, value, onChange }) {
+  if (type === 'pass_fail') return (
+    <div style={{ display: 'flex', gap: 8 }}>
+      {['Pass', 'Fail'].map(opt => (
+        <button key={opt} type="button" onClick={() => onChange(opt)}
+          style={{ padding: '7px 20px', border: `1.5px solid ${value === opt ? (opt === 'Pass' ? '#2a6049' : '#c84b2f') : 'var(--border)'}`, borderRadius: 8, background: value === opt ? (opt === 'Pass' ? '#e8f2ee' : '#fdf0ed') : 'var(--surface)', color: value === opt ? (opt === 'Pass' ? '#2a6049' : '#c84b2f') : 'var(--text2)', cursor: 'pointer', fontWeight: value === opt ? 700 : 400, fontSize: 13 }}>
+          {opt}
+        </button>
+      ))}
+    </div>
+  )
+  if (type === 'percentage') return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <input type="number" min="0" max="100" step="0.01" value={value} onChange={e => onChange(e.target.value)} placeholder="0" style={{ width: 100 }} />
+      <span style={{ fontWeight: 600, color: 'var(--text2)' }}>%</span>
+    </div>
+  )
+  if (type === 'temperature') return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <input type="number" step="0.1" value={value} onChange={e => onChange(e.target.value)} placeholder="0" style={{ width: 100 }} />
+      <span style={{ fontWeight: 600, color: 'var(--text2)' }}>°C</span>
+    </div>
+  )
+  if (type === 'number' || type === 'ratio') return (
+    <input type="number" step="any" value={value} onChange={e => onChange(e.target.value)} placeholder="Enter value…" />
+  )
+  return <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder="Enter value…" />
+}
+
+const RESULT_TYPES = [
+  { value: 'number',      label: 'Number',       hint: 'Plain numeric value' },
+  { value: 'percentage',  label: 'Percentage %',  hint: '0 – 100%' },
+  { value: 'pass_fail',   label: 'Pass / Fail',   hint: 'Pass or Fail toggle' },
+  { value: 'text',        label: 'Text',          hint: 'Free-form text' },
+  { value: 'temperature', label: 'Temperature °C',hint: 'Numeric in °C' },
+  { value: 'ratio',       label: 'Ratio',         hint: 'Decimal ratio e.g. 0.75' },
+]
+
+function formatResultValue(type, value) {
+  if (!value && value !== 0) return '—'
+  if (type === 'percentage')  return value + '%'
+  if (type === 'temperature') return value + '°C'
+  return value
+}
+
+// ── Project Test Results Tab ───────────────────────────────────
+function ResultsTab({ projects, session }) {
+  const { toast } = useAppStore()
+  const [results,   setResults]   = useState([])
+  const [equipment, setEquipment] = useState([])
+  const [loading,   setLoading]   = useState(true)
+  const [showForm,  setShowForm]  = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [saving,    setSaving]    = useState(false)
+
+  const emptyForm = { test_name: '', specimen_name: '', project_id: '', equipment_id: '', result_type: 'number', result_value: '', description: '', result_date: new Date().toISOString().split('T')[0] }
+  const [form, setForm]           = useState(emptyForm)
+  const [equipSearch, setEquipSearch] = useState('')
+  const [selectedEquip, setSelectedEquip] = useState(null)
+  const [showEquipPicker, setShowEquipPicker] = useState(false)
+  const [drillProject, setDrillProject] = useState(null) // project id
+  const [drillEquip,   setDrillEquip]   = useState(null) // equipment id
+  const [uploadFile,   setUploadFile]   = useState(null)
+  const fileInputRef = useRef(null)
+
+  useEffect(() => {
+    sb.from('equipment_inventory').select('id, equipment_name, category').eq('is_active', true).order('category').order('equipment_name')
+      .then(({ data }) => setEquipment(data || []))
+  }, [])
+
+  useEffect(() => { loadResults() }, [projects.length])
+
+  async function loadResults() {
+    setLoading(true)
+    const ids = projects.map(p => p.id)
+    if (!ids.length) { setResults([]); setLoading(false); return }
+    const { data } = await sb.from('test_result_entries').select('*').in('project_id', ids).order('created_at', { ascending: false })
+    setResults(data || [])
+    setLoading(false)
+  }
+
+  function openAdd() {
+    setForm(emptyForm); setSelectedEquip(null); setEditingId(null); setEquipSearch(''); setShowForm(true)
+  }
+
+  function openEdit(r) {
+    setForm({
+      test_name: r.test_name || '', specimen_name: r.specimen_name || '',
+      project_id: r.project_id || '',
+      equipment_id: r.equipment_id || '', result_type: r.result_type || 'number',
+      result_value: r.result_value || '', description: r.explanation || '',
+      result_date: r.date || '',
+    })
+    setSelectedEquip(equipment.find(e => e.id === r.equipment_id) || null)
+    setEditingId(r.id); setShowForm(true)
+  }
+
+  function cancelForm() { setShowForm(false); setEditingId(null); setForm(emptyForm); setSelectedEquip(null); setUploadFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }
+
+  async function save() {
+    if (!form.test_name.trim()) { toast('Test name is required.'); return }
+    if (!form.project_id)       { toast('Select a project.'); return }
+    if (!form.equipment_id)     { toast('Select equipment.'); return }
+    setSaving(true)
+    const payload = {
+      test_name: form.test_name.trim(),
+      sample_name: form.test_name.trim(),
+      specimen_name: form.specimen_name.trim() || null,
+      project_id: form.project_id,
+      equipment_id: form.equipment_id,
+      result_type: form.result_type || null,
+      result_value: form.result_value !== '' ? String(form.result_value) : null,
+      explanation: form.description.trim() || null,
+      date: form.result_date || null,
+      created_by: session?.username || session?.name || session?.email || null,
+    }
+    let savedId = editingId
+    if (editingId) {
+      const { error } = await sb.from('test_result_entries').update(payload).eq('id', editingId)
+      if (error) { toast('Save failed: ' + error.message); setSaving(false); return }
+    } else {
+      const { data, error } = await sb.from('test_result_entries').insert(payload).select('id').single()
+      if (error) { toast('Save failed: ' + error.message); setSaving(false); return }
+      savedId = data.id
+    }
+    if (uploadFile && savedId) {
+      const path = `${form.project_id}/${form.equipment_id}/${Date.now()}-${uploadFile.name}`
+      const { error: upErr } = await sb.storage.from('project-records').upload(path, uploadFile, { contentType: uploadFile.type, upsert: false })
+      if (upErr) {
+        toast('File upload failed: ' + (upErr.message || 'Check that the "project-records" storage bucket exists and is public.'))
+      } else {
+        const { data: urlData } = sb.storage.from('project-records').getPublicUrl(path)
+        const { error: dbErr } = await sb.from('project_record_files').insert({
+          project_id: form.project_id,
+          equipment_id: form.equipment_id || null,
+          test_result_id: savedId,
+          file_name: uploadFile.name,
+          file_path: path,
+          file_url: urlData.publicUrl,
+          file_size: uploadFile.size,
+          file_type: uploadFile.type,
+          created_by: session?.username || session?.name || null,
+        })
+        if (dbErr) toast('File uploaded but record save failed: ' + (dbErr.message || 'Run the project_record_files SQL migration.'))
+      }
+    }
+    toast(editingId ? 'Result updated ✓' : 'Result saved ✓')
+    setSaving(false); cancelForm(); loadResults()
+  }
+
+  async function deleteResult(id) {
+    if (!confirm('Delete this result?')) return
+    await sb.from('test_result_entries').delete().eq('id', id)
+    setResults(prev => prev.filter(r => r.id !== id))
+    toast('Deleted.')
+  }
+
+  const projectMap  = Object.fromEntries(projects.map(p => [p.id, p.name || p.project_name]))
+  const equipMap    = Object.fromEntries(equipment.map(e => [e.id, e.equipment_name]))
+  const filteredEq  = equipment.filter(e => !equipSearch.trim() || e.equipment_name?.toLowerCase().includes(equipSearch.toLowerCase()) || e.category?.toLowerCase().includes(equipSearch.toLowerCase()))
+  const eqCategories = [...new Set(filteredEq.map(e => e.category).filter(Boolean))]
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div style={{ fontWeight: 600, fontSize: 15 }}>Project Test Results</div>
+        {!showForm && <button className="btn btn-sm btn-primary" onClick={openAdd}>+ Add Result</button>}
+      </div>
+
+      {/* Form */}
+      {showForm && (
+        <div className="card" style={{ marginBottom: 20, border: '1.5px solid var(--accent)' }}>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, color: 'var(--accent)' }}>
+            {editingId ? '✏️ Edit Result' : '+ New Test Result'}
+          </div>
+
+          {/* Row 1: Test Name + Specimen Name */}
+          <div className="grid-2">
+            <div className="field">
+              <label>Test Name *</label>
+              <input value={form.test_name} onChange={e => setForm(f => ({ ...f, test_name: e.target.value }))}
+                placeholder="e.g. Marshall Stability, Density Test…" autoFocus />
+            </div>
+            <div className="field">
+              <label>Specimen Name</label>
+              <input value={form.specimen_name} onChange={e => setForm(f => ({ ...f, specimen_name: e.target.value }))}
+                placeholder="e.g. S1, Core-3, Mix-A…" />
+            </div>
+          </div>
+
+          {/* Row 2: Project + Date */}
+          <div className="grid-2">
+            <div className="field">
+              <label>Project *</label>
+              <select value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}>
+                <option value="">— Select project —</option>
+                {projects.map(p => <option key={p.id} value={p.id}>{p.name || p.project_name}</option>)}
+              </select>
+            </div>
+            <div className="field">
+              <label>Result Date</label>
+              <input type="date" value={form.result_date} onChange={e => setForm(f => ({ ...f, result_date: e.target.value }))} />
+            </div>
+          </div>
+
+          {/* Row 3: Equipment picker */}
+          <div className="field">
+            <label>Equipment *</label>
+            <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+              <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
+                <input value={equipSearch} onChange={e => setEquipSearch(e.target.value)}
+                  placeholder="🔍 Search equipment…" style={{ width: '100%', border: 'none', background: 'transparent', fontSize: 13, outline: 'none' }} />
+              </div>
+              <div style={{ maxHeight: 180, overflowY: 'auto' }}>
+                {eqCategories.length === 0
+                  ? <div style={{ padding: 12, fontSize: 13, color: 'var(--text3)' }}>No equipment found.</div>
+                  : eqCategories.map(cat => (
+                      <div key={cat}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', padding: '5px 12px 2px', background: 'var(--surface2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{cat}</div>
+                        {filteredEq.filter(e => e.category === cat).map(e => {
+                          const active = form.equipment_id === e.id
+                          return (
+                            <div key={e.id} onClick={() => { setForm(f => ({ ...f, equipment_id: e.id })); setSelectedEquip(e) }}
+                              style={{ padding: '7px 12px', cursor: 'pointer', background: active ? 'var(--accent-light, #e8f4ff)' : 'transparent', borderLeft: `3px solid ${active ? 'var(--accent)' : 'transparent'}`, fontSize: 13, color: active ? 'var(--accent)' : 'var(--text)', fontWeight: active ? 600 : 400 }}>
+                              {e.equipment_name}
+                              {active && <span style={{ marginLeft: 6, fontSize: 11 }}>✓</span>}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ))
+                }
+              </div>
+              {selectedEquip && (
+                <div style={{ padding: '6px 12px', borderTop: '1px solid var(--border)', fontSize: 12, color: 'var(--accent)', background: 'var(--accent-light, #e8f4ff)', fontWeight: 600 }}>
+                  Selected: {selectedEquip.equipment_name}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Row 4: Result Type + Value */}
+          <div className="grid-2">
+            <div className="field">
+              <label>Result Type</label>
+              <select value={form.result_type} onChange={e => setForm(f => ({ ...f, result_type: e.target.value, result_value: '' }))}>
+                {RESULT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+              <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>{RESULT_TYPES.find(t => t.value === form.result_type)?.hint}</div>
+            </div>
+            <div className="field">
+              <label>Result Value</label>
+              <ResultValueInput type={form.result_type} value={form.result_value} onChange={v => setForm(f => ({ ...f, result_value: v }))} />
+            </div>
+          </div>
+
+          {/* Row 5: Notes */}
+          <div className="field">
+            <label>Notes / Description</label>
+            <textarea rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+              placeholder="Observations, conditions, sample details…" style={{ resize: 'vertical' }} />
+          </div>
+
+          {/* Row 6: File upload */}
+          <div className="field">
+            <label>Upload File <span style={{ fontWeight: 400, color: 'var(--text3)' }}>(optional — PDF, CSV, image, etc.)</span></label>
+            <div style={{ border: '1.5px dashed var(--border)', borderRadius: 8, padding: '14px 16px', background: 'var(--surface2)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <input ref={fileInputRef} type="file"
+                accept=".pdf,.csv,.txt,.xlsx,.xls,.png,.jpg,.jpeg,.gif,.webp,.svg,.doc,.docx,.ppt,.pptx,.zip"
+                onChange={e => setUploadFile(e.target.files?.[0] || null)}
+                style={{ flex: 1, fontSize: 13, minWidth: 0 }} />
+              {uploadFile && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                  <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>{uploadFile.name}</span>
+                  <button type="button" onClick={() => { setUploadFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                    style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 16, lineHeight: 1, padding: 0 }}>✕</button>
+                </div>
+              )}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>File will appear in Workspace → Records, organized by project and equipment.</div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn btn-primary btn-sm" onClick={save} disabled={saving}>{saving ? 'Saving…' : editingId ? 'Update Result' : 'Save Result'}</button>
+            <button className="btn btn-sm" onClick={cancelForm}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Drill-down results browser */}
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 32 }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
+      ) : results.length === 0 ? (
+        <div className="empty-state"><div className="empty-icon">🧪</div><div>No results yet. Click "+ Add Result" to get started.</div></div>
+      ) : (() => {
+        // build nested map
+        const byProject = {}
+        results.forEach(r => {
+          const pid = r.project_id || '__none__'
+          const eid = r.equipment_id || '__none__'
+          if (!byProject[pid]) byProject[pid] = {}
+          if (!byProject[pid][eid]) byProject[pid][eid] = []
+          byProject[pid][eid].push(r)
+        })
+
+        // ── Level 3: test list for a specific project + equipment ──
+        if (drillProject && drillEquip) {
+          const rows = (byProject[drillProject]?.[drillEquip] || []).slice().sort((a, b) => (a.date || '') < (b.date || '') ? 1 : -1)
+          const nums = rows.map(r => parseFloat(r.result_value)).filter(v => !isNaN(v))
+          const pfRows = rows.filter(r => r.result_type === 'pass_fail')
+          const avg = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null
+          const std = nums.length > 1 ? Math.sqrt(nums.reduce((s, v) => s + (v - avg) ** 2, 0) / nums.length) : null
+          const passRate = pfRows.length ? Math.round(pfRows.filter(r => r.result_value === 'Pass').length / pfRows.length * 100) : null
+          return (
+            <div>
+              {/* Breadcrumb */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, marginBottom: 16, flexWrap: 'wrap' }}>
+                <button onClick={() => { setDrillProject(null); setDrillEquip(null) }} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--accent)', fontWeight: 600, padding: 0, fontSize: 13 }}>All Projects</button>
+                <span style={{ color: 'var(--text3)' }}>›</span>
+                <button onClick={() => setDrillEquip(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--accent)', fontWeight: 600, padding: 0, fontSize: 13 }}>{projectMap[drillProject] || 'Project'}</button>
+                <span style={{ color: 'var(--text3)' }}>›</span>
+                <span style={{ fontWeight: 700, color: 'var(--text)' }}>{equipMap[drillEquip] || 'Equipment'}</span>
+              </div>
+              {/* Summary stats */}
+              {(avg !== null || passRate !== null) && (
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+                  {[
+                    { label: 'Tests', value: rows.length, color: 'var(--accent)' },
+                    avg !== null && { label: 'Average', value: avg.toFixed(2), color: '#0369a1' },
+                    std !== null && { label: 'Std Dev', value: std.toFixed(2), color: '#7c4dbd' },
+                    passRate !== null && { label: 'Pass Rate', value: passRate + '%', color: passRate >= 80 ? '#2a6049' : '#c84b2f' },
+                  ].filter(Boolean).map(s => (
+                    <div key={s.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 18px', textAlign: 'center', minWidth: 90 }}>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.value}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Result cards */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {rows.map(r => (
+                  <div key={r.id} className="card" style={{ padding: '12px 16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 3 }}>{r.test_name || 'Untitled Test'}</div>
+                        {r.specimen_name && <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 5 }}>Specimen: <strong>{r.specimen_name}</strong></div>}
+                        <span style={{ fontSize: 11, background: 'var(--surface2)', color: 'var(--text2)', borderRadius: 99, padding: '2px 9px' }}>
+                          {RESULT_TYPES.find(t => t.value === r.result_type)?.label || r.result_type}
+                        </span>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: r.result_value === 'Pass' ? '#2a6049' : r.result_value === 'Fail' ? '#c84b2f' : 'var(--accent)', margin: '6px 0 2px' }}>
+                          {formatResultValue(r.result_type, r.result_value)}
+                        </div>
+                        {r.explanation && <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5, marginTop: 4 }}>{r.explanation}</div>}
+                        {r.created_by && <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>by {r.created_by}</div>}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                        <div style={{ fontSize: 12, color: 'var(--text3)', textAlign: 'right' }}>
+                          {r.date && <div style={{ fontWeight: 600 }}>{r.date}</div>}
+                          <div>{new Date(r.created_at).toLocaleDateString()}</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button onClick={() => openEdit(r)} className="btn btn-sm" style={{ fontSize: 12, padding: '3px 10px' }}>✏️ Edit</button>
+                          <button onClick={() => deleteResult(r.id)} className="btn btn-sm" style={{ fontSize: 12, padding: '3px 10px', color: '#c84b2f' }}>🗑</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        }
+
+        // ── Level 2: equipment icons for a project ──
+        if (drillProject) {
+          const equipIds = Object.keys(byProject[drillProject] || {}).sort((a, b) => (equipMap[a] || 'zzz').localeCompare(equipMap[b] || 'zzz'))
+          return (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, marginBottom: 16 }}>
+                <button onClick={() => setDrillProject(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--accent)', fontWeight: 600, padding: 0, fontSize: 13 }}>All Projects</button>
+                <span style={{ color: 'var(--text3)' }}>›</span>
+                <span style={{ fontWeight: 700, color: 'var(--text)' }}>{projectMap[drillProject] || 'Project'}</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
+                {equipIds.map(eid => {
+                  const rows   = byProject[drillProject][eid]
+                  const nums   = rows.map(r => parseFloat(r.result_value)).filter(v => !isNaN(v))
+                  const pf     = rows.filter(r => r.result_type === 'pass_fail')
+                  const avg    = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null
+                  const pr     = pf.length ? Math.round(pf.filter(r => r.result_value === 'Pass').length / pf.length * 100) : null
+                  return (
+                    <div key={eid} onClick={() => setDrillEquip(eid)}
+                      style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '18px 16px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s' }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)' }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}>
+                      <div style={{ fontSize: 32, marginBottom: 8 }}>🔧</div>
+                      <div style={{ fontWeight: 700, fontSize: 13, lineHeight: 1.3, marginBottom: 8 }}>{equipMap[eid] || 'Unknown Equipment'}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 6 }}>{rows.length} test{rows.length !== 1 ? 's' : ''}</div>
+                      {avg !== null && <div style={{ fontSize: 12, fontWeight: 600, color: '#0369a1' }}>avg {avg.toFixed(2)}</div>}
+                      {pr !== null && <div style={{ fontSize: 12, fontWeight: 600, color: pr >= 80 ? '#2a6049' : '#c84b2f' }}>{pr}% pass</div>}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        }
+
+        // ── Level 1: project icons ──
+        const projectIds = Object.keys(byProject).sort((a, b) => (projectMap[a] || 'zzz').localeCompare(projectMap[b] || 'zzz'))
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 14 }}>
+            {projectIds.map(pid => {
+              const allRows  = Object.values(byProject[pid]).flat()
+              const equipCnt = Object.keys(byProject[pid]).length
+              const nums     = allRows.map(r => parseFloat(r.result_value)).filter(v => !isNaN(v))
+              const pf       = allRows.filter(r => r.result_type === 'pass_fail')
+              const pr       = pf.length ? Math.round(pf.filter(r => r.result_value === 'Pass').length / pf.length * 100) : null
+              const latest   = allRows.map(r => r.date).filter(Boolean).sort().reverse()[0]
+              return (
+                <div key={pid} onClick={() => setDrillProject(pid)}
+                  style={{ background: 'var(--surface)', border: '2px solid var(--border)', borderRadius: 16, padding: '22px 18px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#1a56db'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(26,86,219,0.12)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}>
+                  <div style={{ fontSize: 38, marginBottom: 10 }}>📁</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.3, marginBottom: 10, color: 'var(--text)' }}>{projectMap[pid] || 'No Project'}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text3)' }}>{equipCnt} equipment · {allRows.length} tests</div>
+                    {pr !== null && <div style={{ fontSize: 12, fontWeight: 600, color: pr >= 80 ? '#2a6049' : '#c84b2f' }}>{pr}% pass rate</div>}
+                    {latest && <div style={{ fontSize: 11, color: 'var(--text3)' }}>Latest: {latest}</div>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )
+      })()}
+    </div>
+  )
+}
+
+// ── Point Chart ───────────────────────────────────────────────
+const PALETTE = ['#0d47a1','#c84b2f','#2a6049','#7c4dbd','#b45309','#0369a1','#be185d','#065f46']
+function PointChart({ results, isOutlier }) {
+  if (!results.length) return null
+
+  const W = 560, H = 200
+  const pad = { t: 24, r: 20, b: 52, l: 50 }
+  const cW = W - pad.l - pad.r
+  const cH = H - pad.t - pad.b
+
+  const getSpecimen = r => r.specimen_name || r.sample_name || 'Unknown'
+  const specimens   = [...new Set(results.map(getSpecimen))]
+  const xOf = sp => pad.l + (specimens.length <= 1 ? cW / 2 : (specimens.indexOf(sp) / (specimens.length - 1)) * cW)
+
+  // numeric values for Y scale
+  const NUMERIC_TYPES = ['number','percentage','temperature','ratio']
+  const numericVals = results.filter(r => NUMERIC_TYPES.includes(r.result_type)).map(r => parseFloat(r.result_value)).filter(v => !isNaN(v))
+
+  // per-specimen stddev stats
+  const specimenStats = {}
+  specimens.forEach(sp => {
+    const spVals = results
+      .filter(r => getSpecimen(r) === sp && NUMERIC_TYPES.includes(r.result_type))
+      .map(r => parseFloat(r.result_value)).filter(v => !isNaN(v))
+    if (spVals.length >= 2) {
+      const mean = spVals.reduce((a, b) => a + b, 0) / spVals.length
+      const std  = Math.sqrt(spVals.reduce((s, v) => s + (v - mean) ** 2, 0) / spVals.length)
+      specimenStats[sp] = { mean, std }
+    }
+  })
+
+  // Y range — extend to fit error bars
+  const allY = [
+    ...numericVals,
+    ...Object.values(specimenStats).flatMap(s => [s.mean + s.std, s.mean - s.std]),
+  ]
+  const rawMin = allY.length ? Math.min(...allY) : 0
+  const rawMax = allY.length ? Math.max(...allY) : 1
+  const padY   = (rawMax - rawMin) * 0.12 || 0.5
+  const yMin   = rawMin - padY
+  const yMax   = rawMax + padY
+  const toY = v => pad.t + ((yMax - v) / (yMax - yMin)) * cH
+
+  const ticks = 4
+  const tickVals = Array.from({ length: ticks + 1 }, (_, i) => yMin + (i / ticks) * (yMax - yMin))
+
+  const testNames = [...new Set(results.map(r => r.test_name || r.sample_name || 'Result'))]
+  const colorOf   = n => PALETTE[testNames.indexOf(n) % PALETTE.length]
+
+  const hasStdDev  = Object.keys(specimenStats).length > 0
+  const hasPassFail = results.some(r => r.result_type === 'pass_fail')
+
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '16px 20px' }}>
+      <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>Results by Specimen</div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', overflow: 'visible', display: 'block' }}>
+        {/* Gridlines + Y-axis ticks */}
+        {tickVals.map((v, i) => (
+          <g key={i}>
+            <line x1={pad.l} y1={toY(v)} x2={W - pad.r} y2={toY(v)} stroke="var(--border)" strokeWidth={0.8} strokeDasharray="3 3" />
+            <text x={pad.l - 5} y={toY(v)} textAnchor="end" dominantBaseline="middle" fontSize={9} fill="var(--text3)">
+              {Math.abs(v) < 100 ? (v % 1 === 0 ? v : v.toFixed(1)) : Math.round(v)}
+            </text>
+          </g>
+        ))}
+        {/* Axes */}
+        <line x1={pad.l} y1={pad.t} x2={pad.l} y2={H - pad.b} stroke="var(--text3)" strokeWidth={1} />
+        <line x1={pad.l} y1={H - pad.b} x2={W - pad.r} y2={H - pad.b} stroke="var(--text3)" strokeWidth={1} />
+
+        {/* Std-dev error bars (drawn before points so points sit on top) */}
+        {Object.entries(specimenStats).map(([sp, s]) => {
+          const x     = xOf(sp)
+          const yMean = toY(s.mean)
+          const yHi   = toY(s.mean + s.std)
+          const yLo   = toY(s.mean - s.std)
+          return (
+            <g key={sp}>
+              <line x1={x} y1={yHi} x2={x} y2={yLo} stroke="#0d47a1" strokeWidth={2.5} strokeOpacity={0.35} />
+              <line x1={x - 6} y1={yHi} x2={x + 6} y2={yHi} stroke="#0d47a1" strokeWidth={1.5} strokeOpacity={0.5} />
+              <line x1={x - 6} y1={yLo} x2={x + 6} y2={yLo} stroke="#0d47a1" strokeWidth={1.5} strokeOpacity={0.5} />
+              <line x1={x - 8} y1={yMean} x2={x + 8} y2={yMean} stroke="#0d47a1" strokeWidth={2.5} strokeOpacity={0.75}>
+                <title>{sp} mean={s.mean.toFixed(3)}, σ={s.std.toFixed(3)}</title>
+              </line>
+            </g>
+          )
+        })}
+
+        {/* Data points */}
+        {results.map((r, i) => {
+          const sp    = getSpecimen(r)
+          const x     = xOf(sp)
+          const tname = r.test_name || r.sample_name || 'Result'
+          const color = colorOf(tname)
+
+          if (r.result_type === 'pass_fail') {
+            const y = r.result_value === 'Pass' ? pad.t + cH * 0.12 : pad.t + cH * 0.88
+            return (
+              <polygon key={i} points={`${x},${y-5} ${x+5},${y} ${x},${y+5} ${x-5},${y}`}
+                fill={r.result_value === 'Pass' ? '#2a6049' : '#c84b2f'} stroke="white" strokeWidth={1.2}>
+                <title>{sp}: {r.result_value} ({r.date})</title>
+              </polygon>
+            )
+          }
+          const v = parseFloat(r.result_value)
+          if (isNaN(v)) return null
+          const y       = toY(v)
+          const outlier = isOutlier(r.result_value)
+          return (
+            <circle key={i} cx={x} cy={y} r={outlier ? 5.5 : 4.5}
+              fill={outlier ? '#c84b2f' : color} stroke="white" strokeWidth={1.5}>
+              <title>{sp}: {r.result_value}{r.result_type === 'percentage' ? '%' : ''} ({r.date}){outlier ? ' ⚠️ outlier' : ''}</title>
+            </circle>
+          )
+        })}
+
+        {/* X-axis specimen labels */}
+        {specimens.map((sp, i) => (
+          <text key={i} x={xOf(sp)} y={H - pad.b + 13} textAnchor="middle" fontSize={9} fill="var(--text2)"
+            transform={specimens.length > 5 ? `rotate(-32,${xOf(sp)},${H - pad.b + 13})` : ''}>
+            {sp.length > 12 ? sp.slice(0, 11) + '…' : sp}
+          </text>
+        ))}
+      </svg>
+
+      {/* Legend */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 16px', marginTop: 8 }}>
+        {testNames.map(n => (
+          <span key={n} style={{ fontSize: 11, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 9, height: 9, borderRadius: '50%', background: colorOf(n), display: 'inline-block' }} />{n}
+          </span>
+        ))}
+        {hasPassFail && <>
+          <span style={{ fontSize: 11, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 9, height: 9, background: '#2a6049', display: 'inline-block', clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)' }} />Pass
+          </span>
+          <span style={{ fontSize: 11, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 9, height: 9, background: '#c84b2f', display: 'inline-block', clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)' }} />Fail
+          </span>
+        </>}
+        {hasStdDev && (
+          <span style={{ fontSize: 11, color: '#0d47a1', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <svg width={14} height={14} style={{ flexShrink: 0 }}>
+              <line x1={7} y1={1} x2={7} y2={13} stroke="#0d47a1" strokeWidth={2} strokeOpacity={0.5} />
+              <line x1={3} y1={1} x2={11} y2={1} stroke="#0d47a1" strokeWidth={1.5} strokeOpacity={0.5} />
+              <line x1={3} y1={13} x2={11} y2={13} stroke="#0d47a1" strokeWidth={1.5} strokeOpacity={0.5} />
+              <line x1={2} y1={7} x2={12} y2={7} stroke="#0d47a1" strokeWidth={2.5} strokeOpacity={0.8} />
+            </svg>
+            Std dev (≥2 results)
+          </span>
+        )}
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 4 }}>● Numeric · ◆ Pass/Fail · Red = outlier (&gt;2σ) · Hover points for details</div>
+    </div>
+  )
+}
+
+// ── Data Analysis ─────────────────────────────────────────────
+function DataAnalysis() {
+  const { session, toast } = useAppStore()
+  const [equipment, setEquipment]   = useState([])
+  const [selected, setSelected]     = useState(null)
+  const [search, setSearch]         = useState('')
+  const [results, setResults]       = useState([])
+  const [comments, setComments]     = useState([])
+  const [newComment, setNewComment] = useState('')
+  const [loadingEq, setLoadingEq]   = useState(true)
+  const [loadingRes, setLoadingRes] = useState(false)
+  const [postingCmt, setPostingCmt] = useState(false)
+  const [filterDate, setFilterDate] = useState('')
+  const [selectedRow, setSelectedRow] = useState(null)
+
+  // ── Inline add-result form ──
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [addSaving, setAddSaving]     = useState(false)
+  const [uploadFile, setUploadFile]   = useState(null)
+  const [allProjects, setAllProjects] = useState([])
+  const fileInputRef = useRef(null)
+  const emptyAddForm = { test_name: '', specimen_name: '', project_id: '', result_type: 'number', result_value: '', description: '', result_date: new Date().toISOString().split('T')[0] }
+  const [addForm, setAddForm] = useState(emptyAddForm)
+
+  useEffect(() => {
+    sb.from('equipment_inventory').select('id, equipment_name, category').eq('is_active', true).order('category').order('equipment_name')
+      .then(({ data }) => { setEquipment(data || []); setLoadingEq(false) })
+    if (session?.organizationId) {
+      sb.from('projects').select('id, name, project_id').eq('status', 'active').eq('organization_id', session.organizationId).order('project_id')
+        .then(({ data }) => setAllProjects(data || []))
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!selected) return
+    setLoadingRes(true)
+    Promise.all([
+      sb.from('test_result_entries').select('*').eq('equipment_id', selected.id).order('date', { ascending: true }),
+      sb.from('analysis_comments').select('*').eq('equipment_id', selected.id).order('created_at', { ascending: true }),
+    ]).then(([r, c]) => { setResults(r.data || []); setComments(c.data || []); setLoadingRes(false) })
+  }, [selected])
+
+  async function saveResult() {
+    if (!addForm.test_name.trim()) { toast('Test name is required.'); return }
+    if (!addForm.project_id)       { toast('Select a project.'); return }
+    if (!addForm.result_value && addForm.result_value !== 0) { toast('Enter a result value.'); return }
+    setAddSaving(true)
+    const payload = {
+      test_name: addForm.test_name.trim(),
+      sample_name: addForm.test_name.trim(),
+      specimen_name: addForm.specimen_name.trim() || null,
+      project_id: addForm.project_id,
+      equipment_id: selected.id,
+      result_type: addForm.result_type || null,
+      result_value: addForm.result_value !== '' ? String(addForm.result_value) : null,
+      explanation: addForm.description.trim() || null,
+      date: addForm.result_date || null,
+      created_by: session?.username || null,
+    }
+    const { data: saved, error } = await sb.from('test_result_entries').insert(payload).select('id').single()
+    if (error) { toast('Save failed: ' + error.message); setAddSaving(false); return }
+
+    if (uploadFile && saved?.id) {
+      const path = `${addForm.project_id}/${selected.id}/${Date.now()}-${uploadFile.name}`
+      const { error: upErr } = await sb.storage.from('project-records').upload(path, uploadFile, { contentType: uploadFile.type, upsert: false })
+      if (upErr) {
+        toast('Result saved but file upload failed: ' + upErr.message)
+      } else {
+        const { data: urlData } = sb.storage.from('project-records').getPublicUrl(path)
+        await sb.from('project_record_files').insert({
+          project_id: addForm.project_id,
+          equipment_id: selected.id,
+          test_result_id: saved.id,
+          file_name: uploadFile.name,
+          file_path: path,
+          file_url: urlData.publicUrl,
+          file_size: uploadFile.size,
+          file_type: uploadFile.type,
+          created_by: session?.username || null,
+        })
+      }
+    }
+
+    toast('Result saved ✓')
+    setAddSaving(false)
+    setShowAddForm(false)
+    setAddForm(emptyAddForm)
+    setUploadFile(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    // Reload results
+    const { data: fresh } = await sb.from('test_result_entries').select('*').eq('equipment_id', selected.id).order('date', { ascending: true })
+    setResults(fresh || [])
+  }
+
+  async function postComment() {
+    if (!newComment.trim()) return
+    setPostingCmt(true)
+    const { data, error } = await sb.from('analysis_comments').insert({
+      equipment_id: selected.id,
+      author: session?.username || session?.name || session?.email || 'Anonymous',
+      body: newComment.trim(),
+    }).select().single()
+    if (!error) { setComments(prev => [...prev, data]); setNewComment('') }
+    else toast('Failed to post comment.')
+    setPostingCmt(false)
+  }
+
+  async function deleteComment(id) {
+    await sb.from('analysis_comments').delete().eq('id', id)
+    setComments(prev => prev.filter(c => c.id !== id))
+  }
+
+  const categories = [...new Set(equipment.map(e => e.category).filter(Boolean))]
+  const filteredEq = equipment.filter(e =>
+    !search.trim() || e.equipment_name?.toLowerCase().includes(search.toLowerCase()) || e.category?.toLowerCase().includes(search.toLowerCase())
+  )
+  const filteredResults = results.filter(r => !filterDate || r.date === filterDate)
+
+  const numericVals = filteredResults.filter(r => r.result_type === 'number' || r.result_type === 'percentage').map(r => parseFloat(r.result_value)).filter(v => !isNaN(v))
+  const pfResults   = filteredResults.filter(r => r.result_type === 'pass_fail')
+  const passRate    = pfResults.length ? Math.round((pfResults.filter(r => r.result_value === 'Pass').length / pfResults.length) * 100) : null
+
+  let stats = null
+  if (numericVals.length > 1) {
+    const avg = numericVals.reduce((a, b) => a + b, 0) / numericVals.length
+    const std = Math.sqrt(numericVals.reduce((s, v) => s + Math.pow(v - avg, 2), 0) / numericVals.length)
+    stats = { avg, min: Math.min(...numericVals), max: Math.max(...numericVals), std, count: numericVals.length }
+  }
+  const isOutlier = v => stats && Math.abs(parseFloat(v) - stats.avg) > 2 * stats.std
+  const chartMax  = numericVals.length ? Math.max(...numericVals) : 1
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 16, alignItems: 'start' }}>
+      {/* Left: equipment list */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+        <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)' }}>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Search equipment…" style={{ width: '100%', fontSize: 13 }} />
+        </div>
+        {loadingEq
+          ? <div style={{ textAlign: 'center', padding: 24 }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
+          : categories.map(cat => {
+              const items = filteredEq.filter(e => e.category === cat)
+              if (!items.length) return null
+              return (
+                <div key={cat}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '7px 12px 3px', background: 'var(--surface2)' }}>{cat}</div>
+                  {items.map(e => {
+                    const active = selected?.id === e.id
+                    return (
+                      <div key={e.id} onClick={() => { setSelected(e); setFilterDate('') }}
+                        style={{ padding: '8px 12px', cursor: 'pointer', background: active ? 'var(--accent3-light)' : 'transparent', borderLeft: `3px solid ${active ? 'var(--accent3)' : 'transparent'}` }}>
+                        <div style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? 'var(--accent3)' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.equipment_name}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })
+        }
+      </div>
+
+      {/* Right: analysis panel */}
+      {!selected ? (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 48, textAlign: 'center', color: 'var(--text3)' }}>
+          <div style={{ fontSize: 36, marginBottom: 8 }}>📊</div>
+          <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)', marginBottom: 6 }}>Select equipment to analyse</div>
+          <div style={{ fontSize: 13 }}>Compare results, view statistics, and discuss findings with your team.</div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Header + date filter */}
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '16px 20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>{selected.equipment_name}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, flexWrap: 'wrap' }}>
+                <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }} />
+                {filterDate && <button onClick={() => setFilterDate('')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 12 }}>✕ Clear</button>}
+                <button className="btn btn-sm btn-primary" onClick={() => { setShowAddForm(f => !f); setAddForm(emptyAddForm); setUploadFile(null) }}>
+                  {showAddForm ? '✕ Cancel' : '+ Add Result'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Inline Add Result Form ── */}
+          {showAddForm && (
+            <div className="card" style={{ border: '1.5px solid var(--accent)' }}>
+              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, color: 'var(--accent)' }}>+ New Test Result</div>
+              <div className="grid-2">
+                <div className="field">
+                  <label>Test Name *</label>
+                  <input value={addForm.test_name} onChange={e => setAddForm(f => ({ ...f, test_name: e.target.value }))} placeholder="e.g. Marshall Stability, Density Test…" autoFocus />
+                </div>
+                <div className="field">
+                  <label>Specimen Name</label>
+                  <input value={addForm.specimen_name} onChange={e => setAddForm(f => ({ ...f, specimen_name: e.target.value }))} placeholder="e.g. S1, Core-3, Mix-A…" />
+                </div>
+              </div>
+              <div className="grid-2">
+                <div className="field">
+                  <label>Project *</label>
+                  <select value={addForm.project_id} onChange={e => setAddForm(f => ({ ...f, project_id: e.target.value }))}>
+                    <option value="">— Select project —</option>
+                    {allProjects.map(p => <option key={p.id} value={p.id}>{p.project_id ? `${p.project_id} – ${p.name}` : p.name}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Result Date</label>
+                  <input type="date" value={addForm.result_date} onChange={e => setAddForm(f => ({ ...f, result_date: e.target.value }))} />
+                </div>
+              </div>
+              <div className="grid-2">
+                <div className="field">
+                  <label>Result Type</label>
+                  <select value={addForm.result_type} onChange={e => setAddForm(f => ({ ...f, result_type: e.target.value, result_value: '' }))}>
+                    {RESULT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>{RESULT_TYPES.find(t => t.value === addForm.result_type)?.hint}</div>
+                </div>
+                <div className="field">
+                  <label>Result Value</label>
+                  <ResultValueInput type={addForm.result_type} value={addForm.result_value} onChange={v => setAddForm(f => ({ ...f, result_value: v }))} />
+                </div>
+              </div>
+              <div className="field">
+                <label>Notes / Description</label>
+                <textarea rows={3} value={addForm.description} onChange={e => setAddForm(f => ({ ...f, description: e.target.value }))} placeholder="Observations, conditions, sample details…" style={{ resize: 'vertical' }} />
+              </div>
+              <div className="field">
+                <label>Upload File <span style={{ fontWeight: 400, color: 'var(--text3)' }}>(optional — PDF, CSV, image, Excel, Word…)</span></label>
+                <div style={{ border: '1.5px dashed var(--border)', borderRadius: 8, padding: '12px 16px', background: 'var(--surface2)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <input ref={fileInputRef} type="file"
+                    accept=".pdf,.csv,.txt,.xlsx,.xls,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.ppt,.pptx,.zip"
+                    onChange={e => setUploadFile(e.target.files?.[0] || null)}
+                    style={{ flex: 1, fontSize: 13, minWidth: 0 }} />
+                  {uploadFile && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>{uploadFile.name}</span>
+                      <button type="button" onClick={() => { setUploadFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 16, lineHeight: 1, padding: 0 }}>✕</button>
+                    </div>
+                  )}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>File will appear in Workspace → Records, organised by project and equipment.</div>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="btn btn-primary btn-sm" onClick={saveResult} disabled={addSaving}>{addSaving ? 'Saving…' : 'Save Result'}</button>
+                <button className="btn btn-sm" onClick={() => { setShowAddForm(false); setAddForm(emptyAddForm); setUploadFile(null) }}>Cancel</button>
+              </div>
+            </div>
+          )}
+
+          {loadingRes ? (
+            <div style={{ textAlign: 'center', padding: 40 }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
+          ) : filteredResults.length === 0 ? (
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 40, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+              No results yet for this equipment{filterDate ? ` on ${filterDate}` : ''}.
+            </div>
+          ) : (
+            <>
+              {/* Stats */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10 }}>
+                {[
+                  { label: 'Total Results', value: filteredResults.length, color: 'var(--accent3)' },
+                  ...(stats ? [
+                    { label: 'Average', value: stats.avg.toFixed(2), color: '#0369a1' },
+                    { label: 'Min',     value: stats.min.toFixed(2), color: '#2a6049' },
+                    { label: 'Max',     value: stats.max.toFixed(2), color: '#c84b2f' },
+                    { label: 'Std Dev', value: stats.std.toFixed(2), color: '#7c4dbd' },
+                  ] : []),
+                  ...(passRate !== null ? [{ label: 'Pass Rate', value: passRate + '%', color: passRate >= 80 ? '#2a6049' : '#c84b2f' }] : []),
+                ].map(s => (
+                  <div key={s.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Chart: point graph */}
+              <PointChart results={filteredResults} isOutlier={isOutlier} />
+
+              {/* Results table + sample info panel */}
+              <div style={{ display: 'grid', gridTemplateColumns: selectedRow ? '1fr 280px' : '1fr', gap: 12, alignItems: 'start' }}>
+                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+                      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 13 }}>All Results <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 400 }}>— click a row for details</span></div>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                          <thead>
+                            <tr style={{ background: 'var(--surface2)' }}>
+                              {['Date', 'Sample', 'Type', 'Result', 'Notes', 'By'].map(h => (
+                                <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredResults.map((r, i) => {
+                              const outlier = (r.result_type === 'number' || r.result_type === 'percentage') && isOutlier(r.result_value)
+                              const isActive = selectedRow?.id === r.id
+                              return (
+                                <tr key={r.id} onClick={() => setSelectedRow(isActive ? null : r)}
+                                  style={{ borderTop: '1px solid var(--border)', cursor: 'pointer', background: isActive ? 'var(--accent3-light)' : outlier ? '#fff5f5' : i % 2 === 0 ? 'var(--surface)' : 'var(--surface2)' }}>
+                                  <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>{r.date}</td>
+                                  <td style={{ padding: '8px 12px', fontWeight: 500 }}>{r.test_name || r.sample_name}</td>
+                                  <td style={{ padding: '8px 12px', color: 'var(--text3)', fontSize: 11, textTransform: 'capitalize' }}>{r.result_type?.replace('_', '/')}</td>
+                                  <td style={{ padding: '8px 12px', fontWeight: 600, color: outlier ? '#c84b2f' : r.result_value === 'Pass' ? '#2a6049' : r.result_value === 'Fail' ? '#c84b2f' : 'var(--text)' }}>
+                                    {r.result_type === 'percentage' ? r.result_value + '%' : r.result_value}{outlier ? ' ⚠️' : ''}
+                                  </td>
+                                  <td style={{ padding: '8px 12px', color: 'var(--text2)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.explanation || '—'}</td>
+                                  <td style={{ padding: '8px 12px', color: 'var(--text3)' }}>{r.created_by || '—'}</td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Sample test info panel */}
+                    {selectedRow && (
+                      <div style={{ background: 'var(--surface)', border: '1px solid var(--accent3)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', position: 'sticky', top: 8 }}>
+                        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontWeight: 600, fontSize: 13 }}>🔬 Sample Test Info</span>
+                          <button onClick={() => setSelectedRow(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 14, color: 'var(--text3)' }}>✕</button>
+                        </div>
+                        <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          {[
+                            { label: 'Test Name',    value: selectedRow.test_name || selectedRow.sample_name },
+                            { label: 'Date',         value: selectedRow.date },
+                            { label: 'Result Type',  value: selectedRow.result_type?.replace('_', ' / ') },
+                            { label: 'Result',       value: selectedRow.result_type === 'percentage' ? selectedRow.result_value + '%' : selectedRow.result_value, bold: true,
+                              color: selectedRow.result_value === 'Pass' ? '#2a6049' : selectedRow.result_value === 'Fail' ? '#c84b2f' : 'var(--text)' },
+                            { label: 'Equipment',    value: selected?.equipment_name },
+                            { label: 'Submitted By', value: selectedRow.created_by },
+                            { label: 'Notes',        value: selectedRow.explanation, multiline: true },
+                          ].map(f => f.value ? (
+                            <div key={f.label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{f.label}</div>
+                              <div style={{ fontSize: 13, fontWeight: f.bold ? 700 : 400, color: f.color || 'var(--text)', lineHeight: f.multiline ? 1.5 : 1.3, background: 'var(--surface2)', borderRadius: 6, padding: '6px 10px' }}>
+                                {f.value}
+                              </div>
+                            </div>
+                          ) : null)}
+                        </div>
+                      </div>
+                    )}
+              </div>
+            </>
+          )}
+
+          {/* Discussion */}
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 13 }}>💬 Team Discussion</div>
+            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 300, overflowY: 'auto' }}>
+              {comments.length === 0
+                ? <div style={{ fontSize: 13, color: 'var(--text3)', textAlign: 'center', padding: '16px 0' }}>No comments yet. Start the discussion below.</div>
+                : comments.map(c => (
+                    <div key={c.id} style={{ display: 'flex', gap: 10 }}>
+                      <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--accent3-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--accent3)', flexShrink: 0 }}>
+                        {c.author?.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                          <span style={{ fontWeight: 600, fontSize: 13 }}>{c.author}</span>
+                          <span style={{ fontSize: 11, color: 'var(--text3)' }}>{new Date(c.created_at).toLocaleDateString()}</span>
+                          {(session?.username === c.author || session?.name === c.author || session?.email === c.author || session?.role === 'admin') && (
+                            <button onClick={() => deleteComment(c.id)} style={{ marginLeft: 'auto', border: 'none', background: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--text3)' }}>✕</button>
+                          )}
+                        </div>
+                        <div style={{ fontSize: 13, lineHeight: 1.5, background: 'var(--surface2)', borderRadius: 8, padding: '8px 12px' }}>{c.body}</div>
+                      </div>
+                    </div>
+                  ))
+              }
+            </div>
+            <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
+              <input value={newComment} onChange={e => setNewComment(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && postComment()}
+                placeholder="Add analysis note or comment…" style={{ flex: 1, fontSize: 13 }} />
+              <button onClick={postComment} disabled={postingCmt || !newComment.trim()} className="btn btn-primary btn-sm">
+                {postingCmt ? '…' : 'Post'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Records Panel ───────────────────────────────────────────────
+function RecordsPanel({ projects }) {
+  const [entries, setEntries] = useState([])
+  const [fileMap, setFileMap] = useState({})   // test_result_id → file row
+  const [loading, setLoading] = useState(true)
+  const [drillProject, setDrillProject] = useState(null)
+  const [drillEquip, setDrillEquip] = useState(null)
+  const [equipment, setEquipment] = useState([])
+
+  useEffect(() => {
+    sb.from('equipment_inventory').select('id, equipment_name').then(({ data }) => setEquipment(data || []))
+  }, [])
+
+  useEffect(() => { loadData() }, [projects.length])
+
+  async function loadData() {
+    setLoading(true)
+    const ids = projects.map(p => p.id)
+    if (!ids.length) { setEntries([]); setFileMap({}); setLoading(false); return }
+    const [{ data: rows }, { data: files }] = await Promise.all([
+      sb.from('test_result_entries').select('*').in('project_id', ids).order('date', { ascending: false }),
+      sb.from('project_record_files').select('*').in('project_id', ids),
+    ])
+    setEntries(rows || [])
+    const fm = {}
+    ;(files || []).forEach(f => { if (f.test_result_id) fm[f.test_result_id] = f })
+    setFileMap(fm)
+    setLoading(false)
+  }
+
+  const projectMap = Object.fromEntries(projects.map(p => [p.id, p.name || p.project_name]))
+  const equipMap = Object.fromEntries(equipment.map(e => [e.id, e.equipment_name]))
+
+  const byProject = {}
+  entries.forEach(r => {
+    const pid = r.project_id || '__none__'
+    const eid = r.equipment_id || '__none__'
+    if (!byProject[pid]) byProject[pid] = {}
+    if (!byProject[pid][eid]) byProject[pid][eid] = []
+    byProject[pid][eid].push(r)
+  })
+
+  const fileIcon = t => {
+    if (!t) return '📄'
+    if (t.includes('pdf')) return '📑'
+    if (t.includes('image')) return '🖼️'
+    if (t.includes('csv') || t.includes('spreadsheet') || t.includes('excel')) return '📊'
+    if (t.includes('text') || t.includes('plain')) return '📝'
+    if (t.includes('zip') || t.includes('compressed')) return '🗜️'
+    if (t.includes('word') || t.includes('document')) return '📃'
+    return '📄'
+  }
+
+  const fmtSize = b => {
+    if (!b) return ''
+    if (b < 1024) return `${b} B`
+    if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`
+    return `${(b / 1024 / 1024).toFixed(1)} MB`
+  }
+
+  const resultColor = r => r.result_value === 'Pass' ? '#2a6049' : r.result_value === 'Fail' ? '#c84b2f' : 'var(--text)'
+
+  if (loading) return <div style={{ textAlign: 'center', padding: 32 }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
+  if (entries.length === 0) return <div className="empty-state"><div className="empty-icon">📂</div><div>No test results yet. Add results in Data Analysis.</div></div>
+
+  // Level 3: results list for project + equipment
+  if (drillProject && drillEquip) {
+    const rows = byProject[drillProject]?.[drillEquip] || []
+    return (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, marginBottom: 16, flexWrap: 'wrap' }}>
+          <button onClick={() => { setDrillProject(null); setDrillEquip(null) }} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--accent)', fontWeight: 600, padding: 0, fontSize: 13 }}>All Projects</button>
+          <span style={{ color: 'var(--text3)' }}>›</span>
+          <button onClick={() => setDrillEquip(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--accent)', fontWeight: 600, padding: 0, fontSize: 13 }}>{projectMap[drillProject] || 'Project'}</button>
+          <span style={{ color: 'var(--text3)' }}>›</span>
+          <span style={{ fontWeight: 600 }}>{drillEquip === '__none__' ? 'No Equipment' : (equipMap[drillEquip] || 'Equipment')}</span>
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: 'var(--surface2)' }}>
+                {['Date', 'Test Name', 'Specimen', 'Type', 'Result', 'Notes', 'By', 'File'].map(h => (
+                  <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', borderBottom: '1px solid var(--border)' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => {
+                const file = fileMap[r.id]
+                return (
+                  <tr key={r.id} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'var(--surface)' : 'var(--surface2)' }}>
+                    <td style={{ padding: '8px 12px', whiteSpace: 'nowrap', color: 'var(--text2)' }}>{r.date || '—'}</td>
+                    <td style={{ padding: '8px 12px', fontWeight: 500 }}>{r.test_name || '—'}</td>
+                    <td style={{ padding: '8px 12px', color: 'var(--text2)' }}>{r.specimen_name || r.sample_name || '—'}</td>
+                    <td style={{ padding: '8px 12px', color: 'var(--text3)', fontSize: 11, textTransform: 'capitalize' }}>{r.result_type?.replace('_', '/') || '—'}</td>
+                    <td style={{ padding: '8px 12px', fontWeight: 600, color: resultColor(r) }}>
+                      {r.result_type === 'percentage' ? (r.result_value + '%') : r.result_value || '—'}
+                    </td>
+                    <td style={{ padding: '8px 12px', color: 'var(--text2)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.explanation || '—'}</td>
+                    <td style={{ padding: '8px 12px', color: 'var(--text3)' }}>{r.created_by || '—'}</td>
+                    <td style={{ padding: '8px 12px' }}>
+                      {file ? (
+                        <a href={file.file_url} target="_blank" rel="noopener noreferrer"
+                          style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 18, textDecoration: 'none' }} title={`${file.file_name} (${fmtSize(file.file_size)})`}>
+                          {fileIcon(file.file_type)}
+                        </a>
+                      ) : '—'}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )
+  }
+
+  // Level 2: equipment list for a project
+  if (drillProject) {
+    const equips = byProject[drillProject] || {}
+    return (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, marginBottom: 16 }}>
+          <button onClick={() => setDrillProject(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--accent)', fontWeight: 600, padding: 0, fontSize: 13 }}>All Projects</button>
+          <span style={{ color: 'var(--text3)' }}>›</span>
+          <span style={{ fontWeight: 600 }}>{projectMap[drillProject] || 'Project'}</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 10 }}>
+          {Object.entries(equips).map(([eid, rows]) => (
+            <div key={eid} onClick={() => setDrillEquip(eid)}
+              style={{ padding: 16, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', transition: 'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.background = 'var(--accent-light, #e8f4ff)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--surface)' }}>
+              <div style={{ fontSize: 24, marginBottom: 6 }}>🔧</div>
+              <div style={{ fontWeight: 600, fontSize: 13 }}>{eid === '__none__' ? 'No Equipment' : (equipMap[eid] || 'Equipment')}</div>
+              <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>{rows.length} result{rows.length !== 1 ? 's' : ''}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Level 1: project list
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 10 }}>
+      {Object.entries(byProject).map(([pid, equips]) => {
+        const total = Object.values(equips).reduce((s, arr) => s + arr.length, 0)
+        return (
+          <div key={pid} onClick={() => setDrillProject(pid)}
+            style={{ padding: 16, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', transition: 'all 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.background = 'var(--accent-light, #e8f4ff)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--surface)' }}>
+            <div style={{ fontSize: 24, marginBottom: 6 }}>📁</div>
+            <div style={{ fontWeight: 600, fontSize: 13 }}>{projectMap[pid] || 'Unknown Project'}</div>
+            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>{total} result{total !== 1 ? 's' : ''} · {Object.keys(equips).length} equipment</div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Workspace Tab (members / data analysis / links) ────────────
+function WorkspaceTab({ session, projects, isSolo, readOnly }) {
+  const [wsTab, setWsTab] = useState('members')
+
+  const wsTabs = [
+    { key: 'members',  label: '👥 Project Members' },
+    { key: 'analysis', label: '📊 Data Analysis' },
+    { key: 'records',  label: '📂 Records' },
+    { key: 'links',    label: '🔗 Links' },
+  ]
+
+  return (
+    <div>
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
+        {wsTabs.map(t => (
+          <button key={t.key} onClick={() => setWsTab(t.key)}
+            style={{ padding: '10px 20px', border: 'none', background: 'transparent', fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 500, cursor: 'pointer', color: wsTab === t.key ? 'var(--accent)' : 'var(--text2)', borderBottom: `2px solid ${wsTab === t.key ? 'var(--accent)' : 'transparent'}`, whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {wsTab === 'members' && (
+        isSolo
+          ? <TeammatesPanel session={session} />
+          : <TeamMembersPanel session={session} />
+      )}
+
+      {wsTab === 'analysis' && <DataAnalysis />}
+
+      {wsTab === 'records' && <RecordsPanel projects={projects} />}
+
+      {wsTab === 'links' && (
+        <LinksPanel projects={projects} readOnly={readOnly} />
+      )}
+    </div>
+  )
+}
+
+// ── Material Inventory Tab ─────────────────────────────────────
+function MaterialInventoryTab({ session, isSolo }) {
+  const { toast, sharedWorkspaces, viewingWorkspaceOwnerId, setViewingWorkspaceOwnerId } = useAppStore()
+  const [allProjects, setAllProjects] = useState([])
+  const [projects, setProjects] = useState([])
+  const [users, setUsers] = useState([])
+  const [filter, setFilter] = useState('all')
+  const [loading, setLoading] = useState(true)
+  const [showNewModal, setShowNewModal] = useState(false)
+  const [activeProjectId, setActiveProjectId] = useState(null)
+  const [activeProject, setActiveProject] = useState(null)
+  const [subTab, setSubTab] = useState('info')
+
+  useEffect(() => { loadProjects() }, [filter, viewingWorkspaceOwnerId])
+  useEffect(() => { loadUsers() }, [])
+  useEffect(() => { if (activeProjectId) loadActiveProject() }, [activeProjectId])
+
+  async function loadProjects() {
+    setLoading(true)
+    const baseSelect = 'id, name, project_id, status, cfop, pi_user_id, student_ids, sampling_date, notes, created_at'
+    let q = sb.from('projects').select(baseSelect).order('created_at', { ascending: false })
+
+    if (isSolo && session?.userId) {
+      if (viewingWorkspaceOwnerId) {
+        q = q.eq('solo_owner_id', viewingWorkspaceOwnerId)
+      } else {
+        q = q.eq('solo_owner_id', session.userId)
+      }
+    } else if (!isSolo) {
+      q = q.is('solo_owner_id', null)
+      if (session?.organizationId) q = q.eq('organization_id', session.organizationId)
+    }
+
+    if (filter !== 'all') q = q.eq('status', filter)
+    const { data } = await q
+
+    setAllProjects(data || [])
+    setProjects(data || [])
+    setLoading(false)
+  }
+
+  async function loadUsers() {
+    const { data } = await sb.from('users').select('id, name').order('name')
+    setUsers(data || [])
+  }
+
+  async function loadActiveProject() {
+    const { data } = await sb.from('projects').select('*').eq('id', activeProjectId).single()
+    setActiveProject(data || null)
+  }
+
+  async function deleteProject(id) {
+    if (!confirm('Delete this project and all its data?')) return
+    await sb.from('projects').delete().eq('id', id)
+    setActiveProjectId(null); setActiveProject(null); loadProjects(); toast('Project deleted.')
+  }
+
+  const statusBadge = (s) => s === 'active' ? 'badge-active' : s === 'completed' ? 'badge-completed' : 'badge-hold'
+
+  const subTabs = [
+    { key: 'info',      label: '1 · Project Info' },
+    { key: 'materials', label: '2 · Project Materials' },
+    { key: 'storage',   label: '3 · Material Storage' },
+    { key: 'database',  label: '4 · Database' },
+  ]
+
+  const viewingShared = isSolo && !!viewingWorkspaceOwnerId
+  const viewingOwnerName = sharedWorkspaces.find(ws => ws.ownerId === viewingWorkspaceOwnerId)?.ownerName
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
+        {!viewingShared && (
+          <button className={`btn btn-sm ${isSolo ? 'btn-purple' : 'btn-primary'}`} onClick={() => setShowNewModal(true)}>
+            + New project
+          </button>
+        )}
+      </div>
+
+      {isSolo && sharedWorkspaces.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, padding: '10px 14px', background: '#EEEDFE', borderRadius: 10, border: '1px solid #CECBF6', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#534AB7', marginRight: 4, flexShrink: 0 }}>Workspace:</span>
+          <button
+            onClick={() => { setViewingWorkspaceOwnerId(null); setActiveProjectId(null); setActiveProject(null) }}
+            style={{ padding: '4px 14px', borderRadius: 99, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 12, background: !viewingWorkspaceOwnerId ? '#534AB7' : 'rgba(83,74,183,0.12)', color: !viewingWorkspaceOwnerId ? '#fff' : '#534AB7', transition: 'all 0.15s' }}>
+            My Workspace
+          </button>
+          {sharedWorkspaces.map(ws => (
+            <button key={ws.ownerId}
+              onClick={() => { setViewingWorkspaceOwnerId(ws.ownerId); setActiveProjectId(null); setActiveProject(null) }}
+              style={{ padding: '4px 14px', borderRadius: 99, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 12, background: viewingWorkspaceOwnerId === ws.ownerId ? '#534AB7' : 'rgba(83,74,183,0.12)', color: viewingWorkspaceOwnerId === ws.ownerId ? '#fff' : '#534AB7', transition: 'all 0.15s' }}>
+              {ws.ownerName}'s Workspace
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+        {['all','active','on hold','completed'].map(f => (
+          <button key={f} className={'filter-btn' + (filter === f ? ' active' : '')} onClick={() => setFilter(f)}>
+            {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 16, alignItems: 'start' }}>
+        <div style={{ position: 'sticky', top: 72 }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 24 }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
+          ) : projects.length === 0 ? (
+            <div className="empty-state" style={{ padding: 24 }}><div className="empty-icon">🧪</div><div>No projects found.</div></div>
+          ) : projects.map((p, idx) => {
+            const isActive = activeProjectId === p.id
+            return (
+              <div key={p.id} onClick={() => { setActiveProjectId(p.id); setSubTab('info') }}
+                style={{ background: isActive ? 'var(--accent3-light)' : 'var(--surface)', border: `1px solid ${isActive ? 'var(--accent3)' : 'var(--border)'}`, borderRadius: 'var(--radius-lg)', padding: '10px 14px', marginBottom: 8, cursor: 'pointer', transition: 'all 0.15s' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--text3)', marginBottom: 1 }}>#{idx + 1}</div>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: isActive ? 'var(--accent3)' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+                    {p.project_id && <div style={{ fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--text3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.project_id}</div>}
+                  </div>
+                  <span className={`badge ${statusBadge(p.status)}`} style={{ fontSize: 10, flexShrink: 0, padding: '2px 8px' }}>{p.status}</span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div>
+          {!activeProject ? (
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 48, textAlign: 'center', color: 'var(--text3)' }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>👈</div>
+              <div>Select a project from the list</div>
+            </div>
+          ) : (
+            <div>
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '16px 20px', marginBottom: 4 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 17 }}>{activeProject.name}</div>
+                    <div style={{ fontSize: 12, fontFamily: 'var(--mono)', color: 'var(--text3)', marginTop: 2 }}>
+                      {[activeProject.project_id && `Title: ${activeProject.project_id}`, activeProject.cfop && `CFOP: ${activeProject.cfop}`].filter(Boolean).join(' · ')}
+                    </div>
+                    {viewingShared && (
+                      <div style={{ marginTop: 4, display: 'inline-block', fontSize: 11, fontWeight: 600, background: '#EEEDFE', color: '#534AB7', borderRadius: 99, padding: '2px 8px' }}>
+                        {viewingOwnerName}'s workspace
+                      </div>
+                    )}
+                  </div>
+                  {!viewingShared && (
+                    <button className="btn btn-sm btn-danger" onClick={() => deleteProject(activeProject.id)}>Delete</button>
+                  )}
+                </div>
+              </div>
+              <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 0, background: 'var(--surface)', overflowX: 'auto' }}>
+                {subTabs.map(t => (
+                  <button key={t.key} onClick={() => setSubTab(t.key)}
+                    style={{ padding: '11px 16px', border: 'none', background: 'transparent', fontFamily: 'var(--sans)', fontSize: 13, fontWeight: 500, cursor: 'pointer', color: subTab === t.key ? 'var(--accent3)' : 'var(--text2)', borderBottom: `2px solid ${subTab === t.key ? 'var(--accent3)' : 'transparent'}`, whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 var(--radius-lg) var(--radius-lg)', padding: 24 }}>
+                {subTab === 'info'      && <ProjectInfo project={activeProject} users={users} onSaved={loadActiveProject} isSolo={isSolo} readOnly={viewingShared} />}
+                {subTab === 'materials' && <ProjectMaterials project={activeProject} />}
+                {subTab === 'storage'   && <MaterialStorage project={activeProject} />}
+                {subTab === 'database'  && <ProjectDatabase project={activeProject} />}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {showNewModal && (
+        <NewProjectModal
+          users={users}
+          isSolo={isSolo}
+          soloOwnerId={isSolo ? session?.userId : null}
+          onClose={() => setShowNewModal(false)}
+          onCreated={(id) => { setActiveProjectId(id); loadProjects() }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── Main Screen ────────────────────────────────────────────────
+export default function ProjectMaterial() {
+  const { session, sharedWorkspaces, viewingWorkspaceOwnerId } = useAppStore()
+  const isSolo = session?.loginMode === 'solo'
+  const [mainTab, setMainTab] = useState('inventory')
+  const [allProjects, setAllProjects] = useState([])
+
+  const accentColor = isSolo ? '#534AB7' : 'var(--accent)'
+
+  useEffect(() => { loadAllProjects() }, [viewingWorkspaceOwnerId])
+
+  async function loadAllProjects() {
+    const baseSelect = 'id, name, project_id, status, created_at'
+    let q = sb.from('projects').select(baseSelect).order('name')
+
+    if (isSolo && session?.userId) {
+      if (viewingWorkspaceOwnerId) {
+        q = q.eq('solo_owner_id', viewingWorkspaceOwnerId)
+      } else {
+        q = q.eq('solo_owner_id', session.userId)
+      }
+    } else if (!isSolo) {
+      q = q.is('solo_owner_id', null)
+      if (session?.organizationId) q = q.eq('organization_id', session.organizationId)
+    }
+
+    const { data } = await q
+    setAllProjects(data || [])
+  }
+
+  const viewingShared = isSolo && !!viewingWorkspaceOwnerId
+
+  const mainTabs = [
+    { key: 'inventory', label: '📦 Material Inventory' },
+    { key: 'results',   label: '✏️ Project Test Results' },
+    { key: 'workspace', label: '📋 Workspace' },
+  ]
+
+  return (
+    <div>
+      <div className="section-header" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="section-title">Project &amp; Material</div>
+        <HelpPanel screen="projects" />
+      </div>
+
+      {/* Main tabs */}
+      <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
+        {mainTabs.map(t => (
+          <button key={t.key} onClick={() => setMainTab(t.key)}
+            style={{ padding: '12px 22px', border: 'none', background: 'transparent', fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 600, cursor: 'pointer', color: mainTab === t.key ? accentColor : 'var(--text2)', borderBottom: `3px solid ${mainTab === t.key ? accentColor : 'transparent'}`, marginBottom: -2, whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {mainTab === 'inventory' && (
+        <MaterialInventoryTab session={session} isSolo={isSolo} />
+      )}
+
+      {mainTab === 'results' && (
+        <ResultsTab projects={allProjects} session={session} />
+      )}
+
+      {mainTab === 'workspace' && (
+        <WorkspaceTab session={session} projects={allProjects} isSolo={isSolo} readOnly={viewingShared} />
+      )}
+    </div>
+  )
+}
