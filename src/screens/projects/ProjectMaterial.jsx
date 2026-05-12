@@ -262,22 +262,26 @@ function SubmitResultPanel({ projects, session }) {
 }
 
 // ── Links Panel ────────────────────────────────────────────────
-function LinksPanel({ projects, readOnly }) {
-  const { toast } = useAppStore()
+function LinksPanel({ projects, readOnly, allowedNames }) {
+  const { toast, session } = useAppStore()
   const [links, setLinks] = useState([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ project_id: '', title: '', url: '' })
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { loadLinks() }, [projects.length])
+  useEffect(() => { if (allowedNames !== null) loadLinks() }, [projects.length, allowedNames])
 
   async function loadLinks() {
     setLoading(true)
     const ids = projects.map(p => p.id)
     if (!ids.length) { setLinks([]); setLoading(false); return }
     const { data } = await sb.from('project_links').select('*').in('project_id', ids).order('created_at', { ascending: false })
-    setLinks(data || [])
+    const all = data || []
+    const visible = allowedNames?.size > 0
+      ? all.filter(l => !l.created_by || allowedNames.has(l.created_by))
+      : all
+    setLinks(visible)
     setLoading(false)
   }
 
@@ -290,6 +294,7 @@ function LinksPanel({ projects, readOnly }) {
       project_id: form.project_id,
       title: form.title.trim(),
       url: form.url.trim(),
+      created_by: session?.username || session?.name || session?.email || null,
     })
     if (error) {
       toast('Could not save. Run the SQL migration in Supabase first.')
@@ -418,7 +423,7 @@ function formatResultValue(type, value) {
 }
 
 // ── Project Test Results Tab ───────────────────────────────────
-function ResultsTab({ projects, session }) {
+function ResultsTab({ projects, session, allowedNames }) {
   const { toast } = useAppStore()
   const [results,   setResults]   = useState([])
   const [equipment, setEquipment] = useState([])
@@ -442,14 +447,18 @@ function ResultsTab({ projects, session }) {
       .then(({ data }) => setEquipment(data || []))
   }, [])
 
-  useEffect(() => { loadResults() }, [projects.length])
+  useEffect(() => { if (allowedNames !== null) loadResults() }, [projects.length, allowedNames])
 
   async function loadResults() {
     setLoading(true)
     const ids = projects.map(p => p.id)
     if (!ids.length) { setResults([]); setLoading(false); return }
     const { data } = await sb.from('test_result_entries').select('*').in('project_id', ids).order('created_at', { ascending: false })
-    setResults(data || [])
+    const all = data || []
+    const visible = allowedNames?.size > 0
+      ? all.filter(r => !r.created_by || allowedNames.has(r.created_by))
+      : all
+    setResults(visible)
     setLoading(false)
   }
 
@@ -1541,29 +1550,8 @@ function RecordsPanel({ projects, allowedNames }) {
 }
 
 // ── Workspace Tab (members / data analysis / links) ────────────
-function WorkspaceTab({ session, projects, isSolo, readOnly }) {
+function WorkspaceTab({ session, projects, isSolo, readOnly, allowedNames }) {
   const [wsTab, setWsTab] = useState('members')
-  const [allowedNames, setAllowedNames] = useState(null) // null = still loading
-
-  useEffect(() => {
-    async function loadAllowedNames() {
-      if (!session?.userId || !session?.username) { setAllowedNames(new Set()); return }
-      const names = new Set([session.username])
-      if (!isSolo) {
-        const [{ data: asOwner }, { data: asMember }] = await Promise.all([
-          sb.from('team_workspace_members').select('member_id').eq('owner_id', session.userId),
-          sb.from('team_workspace_members').select('owner_id').eq('member_id', session.userId),
-        ])
-        const ids = [...(asOwner || []).map(m => m.member_id), ...(asMember || []).map(m => m.owner_id)]
-        if (ids.length) {
-          const { data: teammates } = await sb.from('users').select('name').in('id', ids)
-          ;(teammates || []).forEach(u => { if (u.name) names.add(u.name) })
-        }
-      }
-      setAllowedNames(names)
-    }
-    loadAllowedNames()
-  }, [session?.userId])
 
   const wsTabs = [
     { key: 'members',  label: '👥 Project Members' },
@@ -1594,7 +1582,7 @@ function WorkspaceTab({ session, projects, isSolo, readOnly }) {
       {wsTab === 'records' && <RecordsPanel projects={projects} allowedNames={allowedNames} />}
 
       {wsTab === 'links' && (
-        <LinksPanel projects={projects} readOnly={readOnly} />
+        <LinksPanel projects={projects} readOnly={readOnly} allowedNames={allowedNames} />
       )}
     </div>
   )
@@ -1793,8 +1781,32 @@ export default function ProjectMaterial() {
   const isSolo = session?.loginMode === 'solo'
   const [mainTab, setMainTab] = useState('inventory')
   const [allProjects, setAllProjects] = useState([])
+  const [allowedNames, setAllowedNames] = useState(null) // null = loading; Set = ready
 
   const accentColor = isSolo ? '#534AB7' : 'var(--accent)'
+
+  // Build the set of name/email identifiers for the current user + their teammates.
+  // Results, records and links are filtered to only this set.
+  useEffect(() => {
+    async function loadAllowedNames() {
+      const myIds = [session?.username, session?.name, session?.email].filter(Boolean)
+      if (!session?.userId || myIds.length === 0) { setAllowedNames(new Set()); return }
+      const names = new Set(myIds)
+      if (!isSolo) {
+        const [{ data: asOwner }, { data: asMember }] = await Promise.all([
+          sb.from('team_workspace_members').select('member_id').eq('owner_id', session.userId),
+          sb.from('team_workspace_members').select('owner_id').eq('member_id', session.userId),
+        ])
+        const ids = [...(asOwner || []).map(m => m.member_id), ...(asMember || []).map(m => m.owner_id)]
+        if (ids.length) {
+          const { data: teammates } = await sb.from('users').select('name, email').in('id', ids)
+          ;(teammates || []).forEach(u => { if (u.name) names.add(u.name); if (u.email) names.add(u.email) })
+        }
+      }
+      setAllowedNames(names)
+    }
+    loadAllowedNames()
+  }, [session?.userId])
 
   useEffect(() => { loadAllProjects() }, [viewingWorkspaceOwnerId])
 
@@ -1847,11 +1859,11 @@ export default function ProjectMaterial() {
       )}
 
       {mainTab === 'results' && (
-        <ResultsTab projects={allProjects} session={session} />
+        <ResultsTab projects={allProjects} session={session} allowedNames={allowedNames} />
       )}
 
       {mainTab === 'workspace' && (
-        <WorkspaceTab session={session} projects={allProjects} isSolo={isSolo} readOnly={viewingShared} />
+        <WorkspaceTab session={session} projects={allProjects} isSolo={isSolo} readOnly={viewingShared} allowedNames={allowedNames} />
       )}
     </div>
   )
