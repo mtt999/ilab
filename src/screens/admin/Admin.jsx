@@ -197,9 +197,7 @@ function UserModal({ user, orgs, defaultOrgId, isSuperAdmin, defaultRole, onClos
         <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Dr. Smith" autoFocus />
       </div>
       <div className="field"><label>Email * (used to sign in)</label>
-        <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="user@example.com"
-          readOnly={!!user} style={user ? { background: 'var(--surface2)', color: 'var(--text3)' } : {}} />
-        {user && <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>Email cannot be changed after account creation.</div>}
+        <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="user@example.com" />
       </div>
       <div className="field">
         <label>{user ? 'Reset password (leave blank to keep current)' : 'Temporary password *'}</label>
