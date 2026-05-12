@@ -972,7 +972,7 @@ function PointChart({ results, isOutlier }) {
 }
 
 // ── Data Analysis ─────────────────────────────────────────────
-function DataAnalysis() {
+function DataAnalysis({ allowedNames }) {
   const { session, toast } = useAppStore()
   const [equipment, setEquipment]   = useState([])
   const [selected, setSelected]     = useState(null)
@@ -1005,13 +1005,21 @@ function DataAnalysis() {
   }, [])
 
   useEffect(() => {
-    if (!selected) return
+    if (!selected || allowedNames === null) return
     setLoadingRes(true)
     Promise.all([
       sb.from('test_result_entries').select('*').eq('equipment_id', selected.id).order('date', { ascending: true }),
       sb.from('analysis_comments').select('*').eq('equipment_id', selected.id).order('created_at', { ascending: true }),
-    ]).then(([r, c]) => { setResults(r.data || []); setComments(c.data || []); setLoadingRes(false) })
-  }, [selected])
+    ]).then(([r, c]) => {
+      const all = r.data || []
+      const visible = allowedNames.size > 0
+        ? all.filter(row => !row.created_by || allowedNames.has(row.created_by))
+        : all
+      setResults(visible)
+      setComments(c.data || [])
+      setLoadingRes(false)
+    })
+  }, [selected, allowedNames])
 
   async function saveResult() {
     if (!addForm.test_name.trim()) { toast('Test name is required.'); return }
@@ -1060,9 +1068,13 @@ function DataAnalysis() {
     setAddForm(emptyAddForm)
     setUploadFile(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
-    // Reload results
+    // Reload results (apply same privacy filter)
     const { data: fresh } = await sb.from('test_result_entries').select('*').eq('equipment_id', selected.id).order('date', { ascending: true })
-    setResults(fresh || [])
+    const all = fresh || []
+    const visible = allowedNames?.size > 0
+      ? all.filter(row => !row.created_by || allowedNames.has(row.created_by))
+      : all
+    setResults(visible)
   }
 
   async function postComment() {
@@ -1361,7 +1373,7 @@ function DataAnalysis() {
 }
 
 // ── Records Panel ───────────────────────────────────────────────
-function RecordsPanel({ projects }) {
+function RecordsPanel({ projects, allowedNames }) {
   const [entries, setEntries] = useState([])
   const [fileMap, setFileMap] = useState({})   // test_result_id → file row
   const [loading, setLoading] = useState(true)
@@ -1373,7 +1385,7 @@ function RecordsPanel({ projects }) {
     sb.from('equipment_inventory').select('id, equipment_name').then(({ data }) => setEquipment(data || []))
   }, [])
 
-  useEffect(() => { loadData() }, [projects.length])
+  useEffect(() => { if (allowedNames !== null) loadData() }, [projects.length, allowedNames])
 
   async function loadData() {
     setLoading(true)
@@ -1383,7 +1395,11 @@ function RecordsPanel({ projects }) {
       sb.from('test_result_entries').select('*').in('project_id', ids).order('date', { ascending: false }),
       sb.from('project_record_files').select('*').in('project_id', ids),
     ])
-    setEntries(rows || [])
+    const all = rows || []
+    const visible = allowedNames?.size > 0
+      ? all.filter(r => !r.created_by || allowedNames.has(r.created_by))
+      : all
+    setEntries(visible)
     const fm = {}
     ;(files || []).forEach(f => { if (f.test_result_id) fm[f.test_result_id] = f })
     setFileMap(fm)
@@ -1527,6 +1543,27 @@ function RecordsPanel({ projects }) {
 // ── Workspace Tab (members / data analysis / links) ────────────
 function WorkspaceTab({ session, projects, isSolo, readOnly }) {
   const [wsTab, setWsTab] = useState('members')
+  const [allowedNames, setAllowedNames] = useState(null) // null = still loading
+
+  useEffect(() => {
+    async function loadAllowedNames() {
+      if (!session?.userId || !session?.username) { setAllowedNames(new Set()); return }
+      const names = new Set([session.username])
+      if (!isSolo) {
+        const [{ data: asOwner }, { data: asMember }] = await Promise.all([
+          sb.from('team_workspace_members').select('member_id').eq('owner_id', session.userId),
+          sb.from('team_workspace_members').select('owner_id').eq('member_id', session.userId),
+        ])
+        const ids = [...(asOwner || []).map(m => m.member_id), ...(asMember || []).map(m => m.owner_id)]
+        if (ids.length) {
+          const { data: teammates } = await sb.from('users').select('name').in('id', ids)
+          ;(teammates || []).forEach(u => { if (u.name) names.add(u.name) })
+        }
+      }
+      setAllowedNames(names)
+    }
+    loadAllowedNames()
+  }, [session?.userId])
 
   const wsTabs = [
     { key: 'members',  label: '👥 Project Members' },
@@ -1552,9 +1589,9 @@ function WorkspaceTab({ session, projects, isSolo, readOnly }) {
           : <TeamMembersPanel session={session} />
       )}
 
-      {wsTab === 'analysis' && <DataAnalysis />}
+      {wsTab === 'analysis' && <DataAnalysis allowedNames={allowedNames} />}
 
-      {wsTab === 'records' && <RecordsPanel projects={projects} />}
+      {wsTab === 'records' && <RecordsPanel projects={projects} allowedNames={allowedNames} />}
 
       {wsTab === 'links' && (
         <LinksPanel projects={projects} readOnly={readOnly} />
