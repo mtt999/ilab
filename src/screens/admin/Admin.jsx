@@ -534,10 +534,10 @@ export default function Admin() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {tab === 'users' && <button className="btn btn-sm" onClick={() => setAccessModal(u)}>Access</button>}
-                    <button className="btn btn-sm" onClick={() => setUserModal(u)}>Edit</button>
-                    <button className="btn btn-sm" onClick={() => deactivateUser(u)}>{u.is_active ? 'Deactivate' : 'Activate'}</button>
-                    <button className="btn btn-sm btn-danger" onClick={() => deleteUser(u.id)}>Delete</button>
+                    {u.role !== 'admin' && tab === 'users' && <button className="btn btn-sm" onClick={() => setAccessModal(u)}>Access</button>}
+                    {u.role !== 'admin' && <button className="btn btn-sm" onClick={() => setUserModal(u)}>Edit</button>}
+                    {u.role !== 'admin' && <button className="btn btn-sm" onClick={() => deactivateUser(u)}>{u.is_active ? 'Deactivate' : 'Activate'}</button>}
+                    {u.role !== 'admin' && <button className="btn btn-sm btn-danger" onClick={() => deleteUser(u.id)}>Delete</button>}
                   </div>
                 </div>
               </div>

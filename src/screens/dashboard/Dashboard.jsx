@@ -39,7 +39,6 @@ function getAllModulesForStudent() {
     { key: 'remessages',   screen: 'remessages',    label: 'Contact Lab Manager (REs)', sub: 'Notes, ideas & issue reports',     icon: '💬', bg: '#e8f2ee', color: '#2a6049' },
     { key: 'pm',           screen: 'pm',            label: 'Project Management',        sub: 'Tasks, meetings & team chat',      icon: '📋', bg: '#fff3e0', color: '#ff6b00', locked: true },
     { key: 'profile',      screen: 'profile',       label: 'Profile',                   sub: 'Your info & settings',             icon: '👤', bg: '#f3eeff', color: '#7c4dbd' },
-    { key: 'supply_admin', screen: 'home',          label: 'Admin Tools',               sub: 'Rooms, supplies & settings',       icon: '⚙️', bg: '#f5f5f5', color: '#555', locked: true },
     { key: 'barcodeqr',   screen: 'barcodeqr',     label: 'Barcode/QR Scan',           sub: 'Equipment QR code management',     icon: '🔲', bg: '#f0f4ff', color: '#1a56db', locked: true },
   ]
 }
