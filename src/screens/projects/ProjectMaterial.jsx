@@ -26,13 +26,14 @@ function ProjectInfo({ project, users, onSaved, isSolo, readOnly }) {
   const [form, setForm] = useState({
     name: project.name || '', project_id: project.project_id || '',
     cfop: project.cfop || '', status: project.status || 'active',
+    project_group: project.project_group || '',
     pi_user_id: project.pi_user_id || '', student_ids: project.student_ids || [],
     sampling_date: project.sampling_date || '', storage_date: project.storage_date || '',
     notes: project.notes || '',
   })
 
   useEffect(() => {
-    setForm({ name: project.name || '', project_id: project.project_id || '', cfop: project.cfop || '', status: project.status || 'active', pi_user_id: project.pi_user_id || '', student_ids: project.student_ids || [], sampling_date: project.sampling_date || '', storage_date: project.storage_date || '', notes: project.notes || '' })
+    setForm({ name: project.name || '', project_id: project.project_id || '', cfop: project.cfop || '', status: project.status || 'active', project_group: project.project_group || '', pi_user_id: project.pi_user_id || '', student_ids: project.student_ids || [], sampling_date: project.sampling_date || '', storage_date: project.storage_date || '', notes: project.notes || '' })
     setEditing(false)
   }, [project.id])
 
@@ -43,7 +44,7 @@ function ProjectInfo({ project, users, onSaved, isSolo, readOnly }) {
   async function save() {
     if (!form.name.trim()) { toast('Project name is required.'); return }
     if (!form.project_id.trim()) { toast('Project title is required.'); return }
-    const payload = { name: form.name.trim(), project_id: form.project_id.trim(), cfop: form.cfop.trim() || null, status: form.status, pi_user_id: form.pi_user_id || null, student_ids: form.student_ids, sampling_date: form.sampling_date || null, storage_date: form.storage_date || null, notes: form.notes.trim() || null }
+    const payload = { name: form.name.trim(), project_id: form.project_id.trim(), cfop: form.cfop.trim() || null, status: form.status, project_group: form.project_group || null, pi_user_id: form.pi_user_id || null, student_ids: form.student_ids, sampling_date: form.sampling_date || null, storage_date: form.storage_date || null, notes: form.notes.trim() || null }
     const { error } = await sb.from('projects').update(payload).eq('id', project.id)
     if (error) { toast('Error saving project.'); return }
     toast('Project info saved.'); setEditing(false); onSaved()
@@ -73,6 +74,12 @@ function ProjectInfo({ project, users, onSaved, isSolo, readOnly }) {
             <option value="active">Active</option><option value="on hold">On Hold</option><option value="completed">Completed</option>
           </select>
         </div>
+      </div>
+      <div className="field"><label>Project Group</label>
+        <select value={form.project_group} onChange={e => setForm(f => ({ ...f, project_group: e.target.value }))}>
+          <option value="">— All groups —</option>
+          <option>Material</option><option>Sustainability</option><option>GPR</option><option>Mechanic</option><option>Other</option>
+        </select>
       </div>
       {!isSolo && (
         <>
@@ -141,7 +148,7 @@ function ProjectInfo({ project, users, onSaved, isSolo, readOnly }) {
 // ── New Project Modal ──────────────────────────────────────────
 function NewProjectModal({ users, isSolo, soloOwnerId, onClose, onCreated }) {
   const { toast } = useAppStore()
-  const [form, setForm] = useState({ name: '', project_id: '', cfop: '', status: 'active', pi_user_id: '', student_ids: [], sampling_date: '', storage_date: '', notes: '' })
+  const [form, setForm] = useState({ name: '', project_id: '', cfop: '', status: 'active', project_group: '', pi_user_id: '', student_ids: [], sampling_date: '', storage_date: '', notes: '' })
 
   function toggleStudent(id) {
     setForm(f => ({ ...f, student_ids: f.student_ids.includes(id) ? f.student_ids.filter(s => s !== id) : [...f.student_ids, id] }))
@@ -150,7 +157,7 @@ function NewProjectModal({ users, isSolo, soloOwnerId, onClose, onCreated }) {
   async function create() {
     if (!form.name.trim()) { toast('Project name is required.'); return }
     if (!form.project_id.trim()) { toast('Project title is required.'); return }
-    const payload = { name: form.name.trim(), project_id: form.project_id.trim(), cfop: form.cfop.trim() || null, status: form.status, pi_user_id: form.pi_user_id || null, student_ids: form.student_ids, sampling_date: form.sampling_date || null, storage_date: form.storage_date || null, notes: form.notes.trim() || null, solo_owner_id: soloOwnerId || null, organization_id: !soloOwnerId ? (session?.organizationId || null) : null }
+    const payload = { name: form.name.trim(), project_id: form.project_id.trim(), cfop: form.cfop.trim() || null, status: form.status, project_group: form.project_group || null, pi_user_id: form.pi_user_id || null, student_ids: form.student_ids, sampling_date: form.sampling_date || null, storage_date: form.storage_date || null, notes: form.notes.trim() || null, solo_owner_id: soloOwnerId || null, organization_id: !soloOwnerId ? (session?.organizationId || null) : null }
     const { data, error } = await sb.from('projects').insert(payload).select().single()
     if (error) { toast('Error creating project.'); return }
     toast('Project created!'); onCreated(data.id); onClose()
@@ -170,6 +177,12 @@ function NewProjectModal({ users, isSolo, soloOwnerId, onClose, onCreated }) {
             <option value="active">Active</option><option value="on hold">On Hold</option><option value="completed">Completed</option>
           </select>
         </div>
+      </div>
+      <div className="field"><label>Project Group</label>
+        <select value={form.project_group} onChange={e => setForm(f => ({ ...f, project_group: e.target.value }))}>
+          <option value="">— All groups —</option>
+          <option>Material</option><option>Sustainability</option><option>GPR</option><option>Mechanic</option><option>Other</option>
+        </select>
       </div>
       {!isSolo && (
         <>
@@ -335,9 +348,9 @@ function LinksPanel({ projects, readOnly, allowedNames }) {
             <label>Project *</label>
             <select value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}>
               <option value="">— Select project —</option>
-              {(session?.userId === null
+              {(session?.userId === null || !session?.projectGroup
                 ? projects
-                : projects.filter(p => p.pi_user_id === session?.userId || (p.student_ids || []).includes(session?.userId))
+                : projects.filter(p => !p.project_group || p.project_group === session.projectGroup)
               ).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
@@ -1015,7 +1028,7 @@ function DataAnalysis({ allowedNames }) {
     sb.from('equipment_inventory').select('id, equipment_name, category').eq('is_active', true).order('category').order('equipment_name')
       .then(({ data }) => { setEquipment(data || []); setLoadingEq(false) })
     if (session?.organizationId) {
-      sb.from('projects').select('id, name, project_id, pi_user_id, student_ids').eq('status', 'active').eq('organization_id', session.organizationId).order('project_id')
+      sb.from('projects').select('id, name, project_id, pi_user_id, student_ids, project_group').eq('status', 'active').eq('organization_id', session.organizationId).order('project_id')
         .then(({ data }) => setAllProjects(data || []))
     }
   }, [])
@@ -1202,9 +1215,9 @@ function DataAnalysis({ allowedNames }) {
                   <label>Project *</label>
                   <select value={addForm.project_id} onChange={e => setAddForm(f => ({ ...f, project_id: e.target.value }))}>
                     <option value="">— Select project —</option>
-                    {(session?.userId === null
+                    {(session?.userId === null || !session?.projectGroup
                       ? allProjects
-                      : allProjects.filter(p => p.pi_user_id === session?.userId || (p.student_ids || []).includes(session?.userId))
+                      : allProjects.filter(p => !p.project_group || p.project_group === session.projectGroup)
                     ).map(p => <option key={p.id} value={p.id}>{p.project_id ? `${p.project_id} – ${p.name}` : p.name}</option>)}
                   </select>
                 </div>
@@ -1825,7 +1838,7 @@ export default function ProjectMaterial() {
   useEffect(() => { loadAllProjects() }, [viewingWorkspaceOwnerId])
 
   async function loadAllProjects() {
-    const baseSelect = 'id, name, project_id, status, created_at, pi_user_id, student_ids'
+    const baseSelect = 'id, name, project_id, status, created_at, pi_user_id, student_ids, project_group'
     let q = sb.from('projects').select(baseSelect).order('name')
 
     if (isSolo && session?.userId) {

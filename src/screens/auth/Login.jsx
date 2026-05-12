@@ -273,6 +273,7 @@ export default function Login() {
         adminLevel, photoUrl: user.photo_url, avatar: user.avatar,
         loginMode: 'team',
         organizationId: user.organization_id || null,
+        projectGroup: user.project_group || null,
         mustChangePassword: user.must_change_password === true,
       }
       setSession(teamSessionObj)
