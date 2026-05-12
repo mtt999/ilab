@@ -335,7 +335,10 @@ function LinksPanel({ projects, readOnly, allowedNames }) {
             <label>Project *</label>
             <select value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}>
               <option value="">— Select project —</option>
-              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              {(allowedNames === null
+                ? projects
+                : projects.filter(p => p.pi_user_id === session?.userId || (p.student_ids || []).includes(session?.userId))
+              ).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
           <div className="grid-2">
@@ -579,7 +582,10 @@ function ResultsTab({ projects, session, allowedNames }) {
               <label>Project *</label>
               <select value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}>
                 <option value="">— Select project —</option>
-                {projects.map(p => <option key={p.id} value={p.id}>{p.name || p.project_name}</option>)}
+                {(allowedNames === null
+                  ? projects
+                  : projects.filter(p => p.pi_user_id === session?.userId || (p.student_ids || []).includes(session?.userId))
+                ).map(p => <option key={p.id} value={p.id}>{p.name || p.project_name}</option>)}
               </select>
             </div>
             <div className="field">
@@ -1009,7 +1015,7 @@ function DataAnalysis({ allowedNames }) {
     sb.from('equipment_inventory').select('id, equipment_name, category').eq('is_active', true).order('category').order('equipment_name')
       .then(({ data }) => { setEquipment(data || []); setLoadingEq(false) })
     if (session?.organizationId) {
-      sb.from('projects').select('id, name, project_id').eq('status', 'active').eq('organization_id', session.organizationId).order('project_id')
+      sb.from('projects').select('id, name, project_id, pi_user_id, student_ids').eq('status', 'active').eq('organization_id', session.organizationId).order('project_id')
         .then(({ data }) => setAllProjects(data || []))
     }
   }, [])
@@ -1196,7 +1202,10 @@ function DataAnalysis({ allowedNames }) {
                   <label>Project *</label>
                   <select value={addForm.project_id} onChange={e => setAddForm(f => ({ ...f, project_id: e.target.value }))}>
                     <option value="">— Select project —</option>
-                    {allProjects.map(p => <option key={p.id} value={p.id}>{p.project_id ? `${p.project_id} – ${p.name}` : p.name}</option>)}
+                    {(allowedNames === null
+                      ? allProjects
+                      : allProjects.filter(p => p.pi_user_id === session?.userId || (p.student_ids || []).includes(session?.userId))
+                    ).map(p => <option key={p.id} value={p.id}>{p.project_id ? `${p.project_id} – ${p.name}` : p.name}</option>)}
                   </select>
                 </div>
                 <div className="field">
@@ -1816,7 +1825,7 @@ export default function ProjectMaterial() {
   useEffect(() => { loadAllProjects() }, [viewingWorkspaceOwnerId])
 
   async function loadAllProjects() {
-    const baseSelect = 'id, name, project_id, status, created_at'
+    const baseSelect = 'id, name, project_id, status, created_at, pi_user_id, student_ids'
     let q = sb.from('projects').select(baseSelect).order('name')
 
     if (isSolo && session?.userId) {
