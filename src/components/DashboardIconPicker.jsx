@@ -115,8 +115,8 @@ export default function DashboardIconPicker({ session, loginMode, onDone }) {
         const queries = [
           sb.from('user_dashboard_prefs').select('active_modules, allowed_modules').eq('user_id', session.userId).order('created_at', { ascending: false }).limit(1),
         ]
-        // For staff: also load which screens admin has granted them
-        if (session?.role === 'user') {
+        // For staff and students: also load which screens admin has granted them
+        if (session?.role === 'user' || session?.role === 'student') {
           queries.push(sb.from('user_screen_access').select('screen_key').eq('user_id', session.userId))
         }
         const [prefsRes, accessRes] = await Promise.all(queries)
@@ -125,6 +125,12 @@ export default function DashboardIconPicker({ session, loginMode, onDone }) {
         if (session?.role === 'student') {
           pool = prefsRes.data?.[0]?.allowed_modules || []
           setAllowedPool(pool)
+          // Unlock studentLocked modules explicitly granted by admin
+          if (accessRes?.data?.length) {
+            const grantedScreens = new Set(accessRes.data.map(r => r.screen_key))
+            ALL_MODULES_META.filter(m => m.studentLocked && m.screen && grantedScreens.has(m.screen))
+              .forEach(m => localRestricted.delete(m.key))
+          }
         } else if (session?.role === 'user') {
           // Lab managers: adminOnly modules restricted unless explicitly granted; studentLocked modules are free
           const accessKeys = new Set((accessRes?.data || []).map(r => r.screen_key))

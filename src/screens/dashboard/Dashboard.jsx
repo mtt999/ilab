@@ -106,7 +106,7 @@ function LockedCard({ m }) {
   )
 }
 
-function CardGridView({ modules, onNavigate, mileageUrl, labSafetyUrl, isAdmin, onEditUrl, moduleImages, isStudent, activeModules }) {
+function CardGridView({ modules, onNavigate, mileageUrl, labSafetyUrl, isAdmin, onEditUrl, moduleImages, isStudent, activeModules, studentAccess }) {
   const [confirmExternal, setConfirmExternal] = useState(null)
 
   if (isStudent) {
@@ -119,7 +119,8 @@ function CardGridView({ modules, onNavigate, mileageUrl, labSafetyUrl, isAdmin, 
       <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14 }}>
           {visibleMods.map(m => {
-            if (m.locked) return <LockedCard key={m.key} m={m} />
+            const grantedByAdmin = m.locked && m.screen && studentAccess?.has(m.screen)
+            if (m.locked && !grantedByAdmin) return <LockedCard key={m.key} m={m} />
             return <ModuleCard key={m.key} m={m} imgUrl={moduleImages[m.key]} onClick={() => m.external ? setConfirmExternal({ url: m.key === 'mileage' ? mileageUrl : labSafetyUrl }) : onNavigate(m.screen)} />
           })}
         </div>
@@ -316,7 +317,7 @@ export default function Dashboard() {
   const loginMode = session?.loginMode || 'team'
 
   useEffect(() => {
-    if (session?.userId && (session?.role === 'user' || session?.role === 'admin')) {
+    if (session?.userId && (session?.role === 'user' || session?.role === 'admin' || session?.role === 'student')) {
       sb.from('user_screen_access').select('screen_key').eq('user_id', session.userId)
         .then(({ data }) => { if (data?.length) setUserAccess(new Set(data.map(r => r.screen_key))) })
     }
@@ -475,7 +476,7 @@ export default function Dashboard() {
       )}
 
       {isStudent && view==='dashboard' && <StudentDashboardView session={session} onNavigate={s=>setScreen(s)} mileageUrl={mileageUrl} moduleImages={moduleImages} activeModules={activeModules} />}
-      {isStudent && view==='grid'      && <CardGridView modules={modules} onNavigate={s=>setScreen(s)} mileageUrl={mileageUrl} labSafetyUrl={labSafetyUrl} isAdmin={false} onEditUrl={()=>{}} moduleImages={moduleImages} isStudent={true} activeModules={activeModules} />}
+      {isStudent && view==='grid'      && <CardGridView modules={modules} onNavigate={s=>setScreen(s)} mileageUrl={mileageUrl} labSafetyUrl={labSafetyUrl} isAdmin={false} onEditUrl={()=>{}} moduleImages={moduleImages} isStudent={true} activeModules={activeModules} studentAccess={userAccess} />}
       {!isStudent && view==='grid'     && <CardGridView modules={modules} onNavigate={s=>setScreen(s)} mileageUrl={mileageUrl} labSafetyUrl={labSafetyUrl} isAdmin={isAdmin} onEditUrl={(type)=>{setEditingUrl(type);setUrlInput(type==='mileage'?mileageUrl:labSafetyUrl)}} moduleImages={moduleImages} isStudent={false} activeModules={activeModules} />}
       {!isStudent && view==='dashboard' && <DashboardView modules={modules} onNavigate={s=>setScreen(s)} mileageUrl={mileageUrl} labSafetyUrl={labSafetyUrl} moduleImages={moduleImages} />}
 
