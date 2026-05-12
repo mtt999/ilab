@@ -125,12 +125,15 @@ export default function DashboardIconPicker({ session, loginMode, onDone }) {
         if (session?.role === 'student') {
           pool = prefsRes.data?.[0]?.allowed_modules || []
           setAllowedPool(pool)
-          // Unlock studentLocked modules explicitly granted by admin
+          // Unlock studentLocked modules explicitly granted by admin via screen access
           if (accessRes?.data?.length) {
             const grantedScreens = new Set(accessRes.data.map(r => r.screen_key))
             ALL_MODULES_META.filter(m => m.studentLocked && m.screen && grantedScreens.has(m.screen))
               .forEach(m => localRestricted.delete(m.key))
           }
+          // Also unlock studentLocked modules included in the admin-assigned allowed pool
+          ALL_MODULES_META.filter(m => m.studentLocked && pool.includes(m.key))
+            .forEach(m => localRestricted.delete(m.key))
         } else if (session?.role === 'user') {
           // Lab managers: adminOnly modules restricted unless explicitly granted; studentLocked modules are free
           const accessKeys = new Set((accessRes?.data || []).map(r => r.screen_key))

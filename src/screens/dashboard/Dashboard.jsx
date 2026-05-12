@@ -106,7 +106,7 @@ function LockedCard({ m }) {
   )
 }
 
-function CardGridView({ modules, onNavigate, mileageUrl, labSafetyUrl, isAdmin, onEditUrl, moduleImages, isStudent, activeModules, studentAccess }) {
+function CardGridView({ modules, onNavigate, mileageUrl, labSafetyUrl, isAdmin, onEditUrl, moduleImages, isStudent, activeModules, studentAccess, studentAllowedPool }) {
   const [confirmExternal, setConfirmExternal] = useState(null)
 
   if (isStudent) {
@@ -119,7 +119,7 @@ function CardGridView({ modules, onNavigate, mileageUrl, labSafetyUrl, isAdmin, 
       <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14 }}>
           {visibleMods.map(m => {
-            const grantedByAdmin = m.locked && m.screen && studentAccess?.has(m.screen)
+            const grantedByAdmin = m.locked && ((m.screen && studentAccess?.has(m.screen)) || studentAllowedPool?.has(m.key))
             if (m.locked && !grantedByAdmin) return <LockedCard key={m.key} m={m} />
             return <ModuleCard key={m.key} m={m} imgUrl={moduleImages[m.key]} onClick={() => m.external ? setConfirmExternal({ url: m.key === 'mileage' ? mileageUrl : labSafetyUrl }) : onNavigate(m.screen)} />
           })}
@@ -309,6 +309,7 @@ export default function Dashboard() {
   const [urlInput, setUrlInput] = useState('')
   const [savingUrl, setSavingUrl] = useState(false)
   const [userAccess, setUserAccess] = useState(null)
+  const [studentAllowedPool, setStudentAllowedPool] = useState(null)
   const [moduleImages, setModuleImages] = useState({})
 
   const isAdmin   = session?.role === 'admin'
@@ -337,9 +338,12 @@ export default function Dashboard() {
         const { data } = await sb.from('solo_users').select('active_modules').eq('id', session.userId).maybeSingle()
         setActiveModules(data?.active_modules?.length ? data.active_modules : null)
       } else {
-        const { data } = await sb.from('user_dashboard_prefs').select('active_modules').eq('user_id', session.userId).order('created_at', { ascending: false }).limit(1)
+        const { data } = await sb.from('user_dashboard_prefs').select('active_modules, allowed_modules').eq('user_id', session.userId).order('created_at', { ascending: false }).limit(1)
         const row = data?.[0]
         setActiveModules(row?.active_modules?.length ? row.active_modules : null)
+        if (session?.role === 'student') {
+          setStudentAllowedPool(new Set(row?.allowed_modules || []))
+        }
       }
     } catch(e) {}
   }
@@ -476,7 +480,7 @@ export default function Dashboard() {
       )}
 
       {isStudent && view==='dashboard' && <StudentDashboardView session={session} onNavigate={s=>setScreen(s)} mileageUrl={mileageUrl} moduleImages={moduleImages} activeModules={activeModules} />}
-      {isStudent && view==='grid'      && <CardGridView modules={modules} onNavigate={s=>setScreen(s)} mileageUrl={mileageUrl} labSafetyUrl={labSafetyUrl} isAdmin={false} onEditUrl={()=>{}} moduleImages={moduleImages} isStudent={true} activeModules={activeModules} studentAccess={userAccess} />}
+      {isStudent && view==='grid'      && <CardGridView modules={modules} onNavigate={s=>setScreen(s)} mileageUrl={mileageUrl} labSafetyUrl={labSafetyUrl} isAdmin={false} onEditUrl={()=>{}} moduleImages={moduleImages} isStudent={true} activeModules={activeModules} studentAccess={userAccess} studentAllowedPool={studentAllowedPool} />}
       {!isStudent && view==='grid'     && <CardGridView modules={modules} onNavigate={s=>setScreen(s)} mileageUrl={mileageUrl} labSafetyUrl={labSafetyUrl} isAdmin={isAdmin} onEditUrl={(type)=>{setEditingUrl(type);setUrlInput(type==='mileage'?mileageUrl:labSafetyUrl)}} moduleImages={moduleImages} isStudent={false} activeModules={activeModules} />}
       {!isStudent && view==='dashboard' && <DashboardView modules={modules} onNavigate={s=>setScreen(s)} mileageUrl={mileageUrl} labSafetyUrl={labSafetyUrl} moduleImages={moduleImages} />}
 
