@@ -450,6 +450,9 @@ function NotificationPrefsPanel({ userId, role }) {
       { key: 'reminder_daily', label: 'Morning check — see today\'s reminder list (7–11 am)' },
       { key: 'reminder_items', label: 'Reminder item alerts — noon, afternoon & timed items' },
     ]},
+    { title: '🤝 Project Team', desc: 'Notifications about project team invites.', roles: ['student', 'user', 'admin'], events: [
+      { key: 'team_invite', label: 'Project team invite received or accepted' },
+    ]},
     { title: '💬 Lab Messages', desc: 'Messages from the Contact Lab Manager feature.', roles: ['student', 'user', 'admin', 'solo'], events: [
       { key: 'message_reply', label: 'Reply received to my message' },
     ]},

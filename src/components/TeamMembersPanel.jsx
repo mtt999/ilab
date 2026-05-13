@@ -9,8 +9,29 @@ function firstName(name) {
 async function sendNotification(userId, type, title, body) {
   if (!userId) return
   const { data: prefs } = await sb.from('notification_prefs').select('*').eq('user_id', userId).maybeSingle()
-  if (prefs && prefs[type] === false) return
-  await sb.from('notifications').insert({ user_id: userId, type, title, body, read: false })
+
+  // in-app notification (default ON unless explicitly disabled)
+  if (!prefs || prefs[type] !== false) {
+    const { error } = await sb.from('notifications').insert({ user_id: userId, type, title, body, read: false })
+    if (error) console.warn('Notification insert failed:', error.message)
+  }
+
+  // email notification (opt-in — only if user enabled it)
+  if (prefs && prefs[`email_${type}`] === true) {
+    const { data: recipient } = await sb.from('users').select('phone, email').eq('id', userId).maybeSingle()
+    const recipientEmail = recipient?.phone || recipient?.email // phone stores actual email for students
+    if (recipientEmail) {
+      await sb.from('email_notifications_queue').insert({
+        to_email: recipientEmail,
+        subject: title,
+        body,
+        user_id: userId,
+        type,
+      }).then(({ error: emailErr }) => {
+        if (emailErr) console.warn('Email queue insert failed:', emailErr.message)
+      })
+    }
+  }
 }
 
 // Returns display name for a user row: "FirstName LastName" or nickname hint
