@@ -680,7 +680,7 @@ function StudentsPanel({ toast, session }) {
     if (!form.firstName.trim() && !form.lastName.trim()) { toast('Name is required.'); return }
     if (!id && !form.password) { toast('Password is required.'); return }
     if (!form.selectedProjectIds || form.selectedProjectIds.length === 0) { toast('Please assign at least one project.'); return }
-    const payload = { name: form.lastName.trim(), email: form.firstName.trim() || null, phone: form.emailAddr || null, degree: form.supervisor || null, year_semester: form.year_semester || null, project_group: form.project_group || null, assigned_project_ids: form.selectedProjectIds || [], nickname: form.nickname || null, role: 'student', is_active: true, admin_level: 0, pin: '' }
+    const payload = { name: form.lastName.trim(), email: form.firstName.trim() || null, phone: form.emailAddr || null, degree: form.supervisor || null, year_semester: form.year_semester || null, project_group: form.project_group || null, assigned_project_ids: form.selectedProjectIds || [], nickname: form.nickname || null, organization_id: session?.organizationId || null, role: 'student', is_active: true, admin_level: 0, pin: '' }
     if (form.password && form.password.trim()) payload.password = await hashPassword(form.password.trim())
     if (id) {
       const { error } = await sb.from('users').update(payload).eq('id', id)

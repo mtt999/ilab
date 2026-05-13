@@ -38,7 +38,7 @@ export default function TeamMembersPanel({ session }) {
     if (!session?.userId || !session?.organizationId) return
 
     const { data: users } = await sb.from('users')
-      .select('id, name, email, nickname, role')
+      .select('id, name, email, phone, nickname, role')
       .eq('organization_id', session.organizationId)
       .eq('is_active', true)
       .neq('id', session.userId)
@@ -198,6 +198,7 @@ export default function TeamMembersPanel({ session }) {
     ? availableUsers.filter(u =>
         (u.name     || '').toLowerCase().includes(q) ||
         (u.email    || '').toLowerCase().includes(q) ||
+        (u.phone    || '').toLowerCase().includes(q) ||
         (u.nickname || '').toLowerCase().includes(q)
       )
     : []
