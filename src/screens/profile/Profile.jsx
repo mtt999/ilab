@@ -895,12 +895,13 @@ function StudentModal({ student, session, onClose, onSave }) {
         {orgProjects.length > 0 && (
           <div className="field">
             <label>Assigned Projects</label>
-            <div style={{ border:'1px solid var(--border)', borderRadius:'var(--radius)', padding:'8px 12px', maxHeight:180, overflowY:'auto', display:'flex', flexDirection:'column', gap:6 }}>
+            <div style={{ border:'1px solid var(--border)', borderRadius:'var(--radius)', padding:'8px 12px', maxHeight:180, overflowY:'auto' }}>
               {orgProjects.map(p => (
-                <label key={p.id} style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, cursor:'pointer', userSelect:'none' }}>
-                  <input type="checkbox" checked={form.selectedProjectIds.includes(p.id)} onChange={() => toggleProject(p.id)} />
-                  <span>{p.project_id ? `${p.project_id} – ${p.name}` : p.name}</span>
-                </label>
+                <div key={p.id} onClick={() => toggleProject(p.id)}
+                  style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, cursor:'pointer', userSelect:'none', padding:'4px 0' }}>
+                  <input type="checkbox" readOnly checked={form.selectedProjectIds.includes(p.id)} style={{ flexShrink:0, cursor:'pointer' }} />
+                  <span style={{ lineHeight:1.3 }}>{p.project_id ? `${p.project_id} – ${p.name}` : p.name}</span>
+                </div>
               ))}
             </div>
             {form.selectedProjectIds.length > 0 && (
