@@ -856,7 +856,6 @@ function StudentModal({ student, session, onClose, onSave }) {
             )}
           </div>
         )}
-        <div className="field"><label>Year & Semester</label><input value={form.year_semester} onChange={e=>setForm(f=>({...f,year_semester:e.target.value}))} placeholder="e.g. Fall 2024" /></div>
         <div style={{ display:'flex', gap:10, marginTop:8 }}>
           <button className="btn btn-primary" onClick={()=>onSave(form, student?.id)}>Save</button>
           <button className="btn" onClick={onClose}>Cancel</button>
