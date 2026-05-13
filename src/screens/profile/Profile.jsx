@@ -823,7 +823,10 @@ function StudentModal({ student, session, onClose, onSave }) {
           <div className="field"><label>First Name *</label><input value={form.firstName} onChange={e=>setForm(f=>({...f,firstName:e.target.value}))} placeholder="e.g. Ivan" autoFocus /></div>
           <div className="field"><label>Last Name *</label><input value={form.lastName} onChange={e=>setForm(f=>({...f,lastName:e.target.value}))} placeholder="e.g. Akonya" /></div>
         </div>
-        <div className="field"><label>Email Address</label><input type="email" value={form.emailAddr} onChange={e=>setForm(f=>({...f,emailAddr:e.target.value}))} placeholder="netid@illinois.edu" /></div>
+        <div className="grid-2">
+          <div className="field"><label>Nickname <span style={{ fontWeight:400, color:'var(--text3)' }}>(optional)</span></label><input value={form.nickname} onChange={e=>setForm(f=>({...f,nickname:e.target.value}))} placeholder="e.g. Alex" /></div>
+          <div className="field"><label>Email Address</label><input type="email" value={form.emailAddr} onChange={e=>setForm(f=>({...f,emailAddr:e.target.value}))} placeholder="netid@illinois.edu" /></div>
+        </div>
         <div className="field">
           <label>Password{student ? ' (leave blank to keep current)' : ' *'}</label>
           <input type="text" value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} placeholder={student ? 'Leave blank to keep unchanged' : 'Min. 6 chars'} />
@@ -853,10 +856,7 @@ function StudentModal({ student, session, onClose, onSave }) {
             )}
           </div>
         )}
-        <div className="grid-2">
-          <div className="field"><label>Year & Semester</label><input value={form.year_semester} onChange={e=>setForm(f=>({...f,year_semester:e.target.value}))} placeholder="e.g. Fall 2024" /></div>
-          <div className="field"><label>Nickname <span style={{ fontWeight:400, color:'var(--text3)' }}>(optional)</span></label><input value={form.nickname} onChange={e=>setForm(f=>({...f,nickname:e.target.value}))} placeholder="e.g. Alex" /></div>
-        </div>
+        <div className="field"><label>Year & Semester</label><input value={form.year_semester} onChange={e=>setForm(f=>({...f,year_semester:e.target.value}))} placeholder="e.g. Fall 2024" /></div>
         <div style={{ display:'flex', gap:10, marginTop:8 }}>
           <button className="btn btn-primary" onClick={()=>onSave(form, student?.id)}>Save</button>
           <button className="btn" onClick={onClose}>Cancel</button>
