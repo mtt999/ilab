@@ -50,7 +50,6 @@ function ProjectInfo({ project, users, onSaved, isSolo, readOnly }) {
     toast('Project info saved.'); setEditing(false); onSaved()
   }
 
-  const piUser = users.find(u => u.id === project.pi_user_id)
   const statusBadge = project.status === 'active' ? 'badge-active' : project.status === 'completed' ? 'badge-completed' : 'badge-hold'
 
   if (editing) return (
@@ -74,17 +73,11 @@ function ProjectInfo({ project, users, onSaved, isSolo, readOnly }) {
           </select>
         </div>
       </div>
-      <div className="field"><label>Project Group</label>
-        <select value={form.project_group} onChange={e => setForm(f => ({ ...f, project_group: e.target.value }))}>
-          <option value="">— All groups —</option>
-          <option>Material</option><option>Sustainability</option><option>GPR</option><option>Mechanic</option><option>Other</option>
-        </select>
-      </div>
       {!isSolo && (
-        <div className="field"><label>Principal Investigator (PI)</label>
-          <select value={form.pi_user_id} onChange={e => setForm(f => ({ ...f, pi_user_id: e.target.value }))}>
-            <option value="">— Select PI —</option>
-            {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+        <div className="field"><label>Project Group</label>
+          <select value={form.project_group} onChange={e => setForm(f => ({ ...f, project_group: e.target.value }))}>
+            <option value="">— All groups —</option>
+            <option>Material</option><option>Sustainability</option><option>GPR</option><option>Mechanic</option><option>Other</option>
           </select>
         </div>
       )}
@@ -107,10 +100,9 @@ function ProjectInfo({ project, users, onSaved, isSolo, readOnly }) {
         <span className={`badge ${statusBadge}`} style={{ fontSize: 12, padding: '4px 12px' }}>{project.status}</span>
         {project.project_id && <span style={{ fontFamily: 'var(--mono)', fontSize: 12, background: 'var(--surface2)', padding: '4px 12px', borderRadius: 99, color: 'var(--text2)' }}>Title: {project.project_id}</span>}
         {project.cfop && <span style={{ fontFamily: 'var(--mono)', fontSize: 12, background: 'var(--accent-light)', padding: '4px 12px', borderRadius: 99, color: 'var(--accent)' }}>CFOP: {project.cfop}</span>}
+        {!isSolo && project.project_group && <span style={{ fontFamily: 'var(--mono)', fontSize: 12, background: 'var(--surface2)', padding: '4px 12px', borderRadius: 99, color: 'var(--text2)' }}>Group: {project.project_group}</span>}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
-        {!isSolo && <InfoCell label="Principal Investigator" value={piUser?.name} />}
-        {!isSolo && <InfoCell label="Project Group" value={project.project_group || '—'} />}
         <InfoCell label="Created" value={new Date(project.created_at).toLocaleDateString()} />
         <InfoCell label="Sampling Date" value={project.sampling_date} />
         <InfoCell label="Storage Date" value={project.storage_date} />
@@ -158,17 +150,11 @@ function NewProjectModal({ users, isSolo, soloOwnerId, onClose, onCreated }) {
           </select>
         </div>
       </div>
-      <div className="field"><label>Project Group</label>
-        <select value={form.project_group} onChange={e => setForm(f => ({ ...f, project_group: e.target.value }))}>
-          <option value="">— All groups —</option>
-          <option>Material</option><option>Sustainability</option><option>GPR</option><option>Mechanic</option><option>Other</option>
-        </select>
-      </div>
       {!isSolo && (
-        <div className="field"><label>Principal Investigator (PI)</label>
-          <select value={form.pi_user_id} onChange={e => setForm(f => ({ ...f, pi_user_id: e.target.value }))}>
-            <option value="">— Select PI —</option>
-            {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+        <div className="field"><label>Project Group</label>
+          <select value={form.project_group} onChange={e => setForm(f => ({ ...f, project_group: e.target.value }))}>
+            <option value="">— All groups —</option>
+            <option>Material</option><option>Sustainability</option><option>GPR</option><option>Mechanic</option><option>Other</option>
           </select>
         </div>
       )}
