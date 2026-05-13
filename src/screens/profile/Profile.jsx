@@ -899,7 +899,7 @@ function StudentModal({ student, session, onClose, onSave }) {
               {orgProjects.map(p => (
                 <div key={p.id} onClick={() => toggleProject(p.id)}
                   style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, cursor:'pointer', userSelect:'none', padding:'4px 0' }}>
-                  <input type="checkbox" readOnly checked={form.selectedProjectIds.includes(p.id)} style={{ flexShrink:0, cursor:'pointer' }} />
+                  <input type="checkbox" readOnly checked={form.selectedProjectIds.includes(p.id)} style={{ width:'auto', flexShrink:0, cursor:'pointer' }} />
                   <span style={{ lineHeight:1.3 }}>{p.project_id ? `${p.project_id} – ${p.name}` : p.name}</span>
                 </div>
               ))}
