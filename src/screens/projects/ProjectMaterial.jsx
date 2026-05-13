@@ -933,7 +933,7 @@ function PointChart({ results, isOutlier }) {
 }
 
 // ── Data Analysis ─────────────────────────────────────────────
-function DataAnalysis({ allowedNames, userProjectGroup }) {
+function DataAnalysis({ allowedNames, userProjectGroup, userAssignedProjectIds }) {
   const { session, toast } = useAppStore()
   const [equipment, setEquipment]   = useState([])
   const [selected, setSelected]     = useState(null)
@@ -1147,9 +1147,13 @@ function DataAnalysis({ allowedNames, userProjectGroup }) {
                   <label>Project *</label>
                   <select value={addForm.project_id} onChange={e => setAddForm(f => ({ ...f, project_id: e.target.value }))}>
                     <option value="">— Select project —</option>
-                    {(session?.userId === null || !userProjectGroup
+                    {(session?.userId === null || session?.dbRole === 'user'
                       ? allProjects
-                      : allProjects.filter(p => !p.project_group || p.project_group === userProjectGroup)
+                      : userAssignedProjectIds
+                        ? allProjects.filter(p => userAssignedProjectIds.includes(p.id))
+                        : userProjectGroup
+                          ? allProjects.filter(p => !p.project_group || p.project_group === userProjectGroup)
+                          : allProjects
                     ).map(p => <option key={p.id} value={p.id}>{p.project_id ? `${p.project_id} – ${p.name}` : p.name}</option>)}
                   </select>
                 </div>
@@ -1505,7 +1509,7 @@ function RecordsPanel({ projects, allowedNames }) {
 }
 
 // ── Workspace Tab (members / data analysis / links) ────────────
-function WorkspaceTab({ session, projects, isSolo, readOnly, allowedNames, userProjectGroup }) {
+function WorkspaceTab({ session, projects, isSolo, readOnly, allowedNames, userProjectGroup, userAssignedProjectIds }) {
   const [wsTab, setWsTab] = useState('members')
 
   const wsTabs = [
@@ -1532,7 +1536,7 @@ function WorkspaceTab({ session, projects, isSolo, readOnly, allowedNames, userP
           : <TeamMembersPanel session={session} />
       )}
 
-      {wsTab === 'analysis' && <DataAnalysis allowedNames={allowedNames} userProjectGroup={userProjectGroup} />}
+      {wsTab === 'analysis' && <DataAnalysis allowedNames={allowedNames} userProjectGroup={userProjectGroup} userAssignedProjectIds={userAssignedProjectIds} />}
 
       {wsTab === 'records' && <RecordsPanel projects={projects} allowedNames={allowedNames} />}
 
@@ -1738,14 +1742,18 @@ export default function ProjectMaterial() {
   const [allProjects, setAllProjects] = useState([])
   const [allowedNames, setAllowedNames] = useState(undefined) // undefined = loading; null = admin (no filter); Set = filtered
   const [userProjectGroup, setUserProjectGroup] = useState(undefined) // undefined = loading; null = no group; string = group name
+  const [userAssignedProjectIds, setUserAssignedProjectIds] = useState(undefined)
 
   const accentColor = isSolo ? '#534AB7' : 'var(--accent)'
 
-  // Fetch the current user's project_group directly from DB — don't rely on session (may be stale)
+  // Fetch the current user's project_group and assigned_project_ids directly from DB — don't rely on session (may be stale)
   useEffect(() => {
-    if (!session?.userId) { setUserProjectGroup(null); return }
-    sb.from('users').select('project_group').eq('id', session.userId).single()
-      .then(({ data }) => setUserProjectGroup(data?.project_group || null))
+    if (!session?.userId) { setUserProjectGroup(null); setUserAssignedProjectIds(null); return }
+    sb.from('users').select('project_group, assigned_project_ids').eq('id', session.userId).single()
+      .then(({ data }) => {
+        setUserProjectGroup(data?.project_group || null)
+        setUserAssignedProjectIds(data?.assigned_project_ids?.length ? data.assigned_project_ids : null)
+      })
   }, [session?.userId])
 
   // Build the set of name/email identifiers for the current user + their teammates.
@@ -1802,9 +1810,14 @@ export default function ProjectMaterial() {
   // userProjectGroup===undefined means still loading — use full list to avoid flash of empty dropdown.
   // null means user has no group assigned — show all projects.
   const assignedProjects = useMemo(() => {
-    if (session?.userId === null || !userProjectGroup || userProjectGroup === undefined) return allProjects
-    return allProjects.filter(p => !p.project_group || p.project_group === userProjectGroup)
-  }, [allProjects, userProjectGroup, session?.userId])
+    // Admins, lab managers (dbRole='user'), and solo users see all projects
+    if (session?.userId === null || session?.dbRole === 'user' || isSolo) return allProjects
+    // If lab manager assigned specific projects, use that list
+    if (userAssignedProjectIds) return allProjects.filter(p => userAssignedProjectIds.includes(p.id))
+    // Fall back to project_group matching
+    if (userProjectGroup) return allProjects.filter(p => !p.project_group || p.project_group === userProjectGroup)
+    return allProjects
+  }, [allProjects, userProjectGroup, userAssignedProjectIds, session?.userId, session?.dbRole, isSolo])
 
   const mainTabs = [
     { key: 'inventory', label: '📦 Material Inventory' },
@@ -1838,7 +1851,7 @@ export default function ProjectMaterial() {
       )}
 
       {mainTab === 'workspace' && (
-        <WorkspaceTab session={session} projects={assignedProjects} isSolo={isSolo} readOnly={viewingShared} allowedNames={allowedNames} userProjectGroup={userProjectGroup} />
+        <WorkspaceTab session={session} projects={assignedProjects} isSolo={isSolo} readOnly={viewingShared} allowedNames={allowedNames} userProjectGroup={userProjectGroup} userAssignedProjectIds={userAssignedProjectIds} />
       )}
     </div>
   )

@@ -737,7 +737,7 @@ function StudentsPanel({ toast, session }) {
   async function saveStudent(form, id) {
     if (!form.firstName.trim() && !form.lastName.trim()) { toast('Name is required.'); return }
     if (!id && !form.password) { toast('Password is required.'); return }
-    const payload = { name: form.lastName.trim(), email: form.firstName.trim() || null, phone: form.emailAddr || null, degree: form.supervisor || null, year_semester: form.year_semester || null, project_group: form.project_group || null, role: 'student', is_active: true, admin_level: 0, pin: '' }
+    const payload = { name: form.lastName.trim(), email: form.firstName.trim() || null, phone: form.emailAddr || null, degree: form.supervisor || null, year_semester: form.year_semester || null, project_group: form.project_group || null, assigned_project_ids: form.selectedProjectIds || [], role: 'student', is_active: true, admin_level: 0, pin: '' }
     if (form.password && form.password.trim()) payload.password = await hashPassword(form.password.trim())
     if (id) {
       const { error } = await sb.from('users').update(payload).eq('id', id)
@@ -839,17 +839,38 @@ function StudentsPanel({ toast, session }) {
           </div>
         ))
       }
-      {showModal && <StudentModal student={editStudent} onClose={() => { setShowModal(false); setEditStudent(null) }} onSave={saveStudent} />}
+      {showModal && <StudentModal student={editStudent} session={session} onClose={() => { setShowModal(false); setEditStudent(null) }} onSave={saveStudent} />}
       {iconStudent && <StudentIconManager student={iconStudent} onClose={(saved) => { setIconStudent(null); if (saved) toast(`Icons updated for ${iconStudent.email || iconStudent.name} ✓`) }} />}
     </div>
   )
 }
 
-function StudentModal({ student, onClose, onSave }) {
+function StudentModal({ student, session, onClose, onSave }) {
   const [form, setForm] = useState(student ? {
     firstName: sFirstName(student), lastName: sLastName(student), emailAddr: sEmail(student), supervisor: sSupervisor(student),
     password: '', year_semester: student.year_semester||'', project_group: student.project_group||'',
-  } : { firstName: '', lastName: '', emailAddr: '', supervisor: '', password: '', year_semester: '', project_group: '' })
+    selectedProjectIds: student.assigned_project_ids || [],
+  } : { firstName: '', lastName: '', emailAddr: '', supervisor: '', password: '', year_semester: '', project_group: '', selectedProjectIds: [] })
+  const [orgProjects, setOrgProjects] = useState([])
+
+  useEffect(() => {
+    if (!session?.organizationId) return
+    sb.from('projects').select('id, name, project_id')
+      .eq('organization_id', session.organizationId)
+      .is('solo_owner_id', null)
+      .order('name')
+      .then(({ data }) => setOrgProjects(data || []))
+  }, [session?.organizationId])
+
+  function toggleProject(id) {
+    setForm(f => ({
+      ...f,
+      selectedProjectIds: f.selectedProjectIds.includes(id)
+        ? f.selectedProjectIds.filter(x => x !== id)
+        : [...f.selectedProjectIds, id],
+    }))
+  }
+
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.35)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
       <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:28, maxWidth:520, width:'100%', maxHeight:'90vh', overflowY:'auto', border:'1px solid var(--border)' }}>
@@ -871,6 +892,22 @@ function StudentModal({ student, onClose, onSave }) {
             </select>
           </div>
         </div>
+        {orgProjects.length > 0 && (
+          <div className="field">
+            <label>Assigned Projects</label>
+            <div style={{ border:'1px solid var(--border)', borderRadius:'var(--radius)', padding:'8px 12px', maxHeight:180, overflowY:'auto', display:'flex', flexDirection:'column', gap:6 }}>
+              {orgProjects.map(p => (
+                <label key={p.id} style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, cursor:'pointer', userSelect:'none' }}>
+                  <input type="checkbox" checked={form.selectedProjectIds.includes(p.id)} onChange={() => toggleProject(p.id)} />
+                  <span>{p.project_id ? `${p.project_id} – ${p.name}` : p.name}</span>
+                </label>
+              ))}
+            </div>
+            {form.selectedProjectIds.length > 0 && (
+              <div style={{ fontSize:11, color:'var(--text3)', marginTop:4 }}>{form.selectedProjectIds.length} project{form.selectedProjectIds.length !== 1 ? 's' : ''} selected</div>
+            )}
+          </div>
+        )}
         <div className="field"><label>Year & Semester</label><input value={form.year_semester} onChange={e=>setForm(f=>({...f,year_semester:e.target.value}))} placeholder="e.g. Fall 2024" /></div>
         <div style={{ display:'flex', gap:10, marginTop:8 }}>
           <button className="btn btn-primary" onClick={()=>onSave(form, student?.id)}>Save</button>
