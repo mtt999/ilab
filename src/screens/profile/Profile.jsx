@@ -1137,9 +1137,13 @@ function UserProfileForm({ session, toast }) {
     setLoading(false)
   }
 
+  const isStudent = session?.role === 'student'
+
   async function saveInfo() {
     setSaving(true)
-    const { error } = await sb.from('users').update({ name: form.name.trim(), last_name: form.last_name||null, phone: form.phone||null, degree: form.degree||null, year_semester: form.year_semester||null, supervisor: form.supervisor||null, project_group: form.project_group||null, photo_url: form.photo_url||null }).eq('id', user.id)
+    const payload = { name: form.name.trim(), last_name: form.last_name||null, phone: form.phone||null, degree: form.degree||null, year_semester: form.year_semester||null, photo_url: form.photo_url||null }
+    if (!isStudent) { payload.supervisor = form.supervisor||null; payload.project_group = form.project_group||null }
+    const { error } = await sb.from('users').update(payload).eq('id', user.id)
     if (error) { toast('Error saving: ' + error.message); setSaving(false); return }
     setSession({ ...session, username: form.name.trim(), photoUrl: form.photo_url||null })
     toast('Profile saved ✓'); setSaving(false); load()
@@ -1245,11 +1249,17 @@ function UserProfileForm({ session, toast }) {
             </div>
           </div>
           <div className="grid-2">
-            <div className="field"><label>Supervisor</label><SupervisorSelect value={form.supervisor} onChange={v => setForm(f => ({ ...f, supervisor: v }))} /></div>
+            <div className="field"><label>Supervisor</label>
+              {isStudent
+                ? <input value={form.supervisor || '—'} readOnly style={{ background: 'var(--surface2)', color: 'var(--text3)', cursor: 'default' }} />
+                : <SupervisorSelect value={form.supervisor} onChange={v => setForm(f => ({ ...f, supervisor: v }))} />}
+            </div>
             <div className="field"><label>Project Group</label>
-              <select value={form.project_group} onChange={e => setForm(f => ({ ...f, project_group: e.target.value }))}>
-                <option value="">— Select —</option>{PROJECT_GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
+              {isStudent
+                ? <input value={form.project_group || '—'} readOnly style={{ background: 'var(--surface2)', color: 'var(--text3)', cursor: 'default' }} />
+                : <select value={form.project_group} onChange={e => setForm(f => ({ ...f, project_group: e.target.value }))}>
+                    <option value="">— Select —</option>{PROJECT_GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>}
             </div>
           </div>
           <button className="btn btn-primary" onClick={saveInfo} disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button>
