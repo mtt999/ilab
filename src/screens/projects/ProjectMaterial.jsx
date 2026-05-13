@@ -1512,11 +1512,16 @@ function RecordsPanel({ projects, allowedNames }) {
 function WorkspaceTab({ session, projects, isSolo, readOnly, allowedNames, userProjectGroup, userAssignedProjectIds }) {
   const [wsTab, setWsTab] = useState('members')
 
+  const isLabUser = !isSolo && session?.dbRole === 'student'
+  const hasProjectAccess = !isLabUser || !!userAssignedProjectIds
+
   const wsTabs = [
     { key: 'members',  label: '👥 Project Members' },
-    { key: 'analysis', label: '📊 Data Analysis' },
-    { key: 'records',  label: '📂 Records' },
-    { key: 'links',    label: '🔗 Links' },
+    ...(hasProjectAccess ? [
+      { key: 'analysis', label: '📊 Data Analysis' },
+      { key: 'records',  label: '📂 Records' },
+      { key: 'links',    label: '🔗 Links' },
+    ] : []),
   ]
 
   return (
@@ -1819,10 +1824,15 @@ export default function ProjectMaterial() {
     return allProjects
   }, [allProjects, userProjectGroup, userAssignedProjectIds, session?.userId, session?.dbRole, isSolo])
 
+  const isLabUser = !isSolo && session?.dbRole === 'student'
+  const hasProjectAccess = !isLabUser || !!userAssignedProjectIds
+
   const mainTabs = [
     { key: 'inventory', label: '📦 Material Inventory' },
-    { key: 'results',   label: '✏️ Project Test Results' },
-    { key: 'workspace', label: '📋 Workspace' },
+    ...(hasProjectAccess ? [
+      { key: 'results',   label: '✏️ Project Test Results' },
+      { key: 'workspace', label: '📋 Workspace' },
+    ] : []),
   ]
 
   return (
