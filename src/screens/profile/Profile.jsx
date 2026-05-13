@@ -566,6 +566,63 @@ function OrgContactPanel({ session, toast }) {
   )
 }
 
+// ── Project Groups Panel ───────────────────────────────────────
+function ProjectGroupsPanel({ session }) {
+  const { toast } = useAppStore()
+  const [projects, setProjects] = useState([])
+  const [groups, setGroups] = useState({}) // { projectId: group }
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!session?.organizationId) return
+    sb.from('projects').select('id, name, project_id, project_group')
+      .eq('organization_id', session.organizationId).is('solo_owner_id', null).order('name')
+      .then(({ data }) => {
+        const rows = data || []
+        setProjects(rows)
+        setGroups(Object.fromEntries(rows.map(p => [p.id, p.project_group || ''])))
+      })
+  }, [session?.organizationId])
+
+  async function saveAll() {
+    setSaving(true)
+    await Promise.all(projects.map(p =>
+      sb.from('projects').update({ project_group: groups[p.id] || null }).eq('id', p.id)
+    ))
+    setSaving(false)
+    toast('Project groups saved.')
+  }
+
+  if (!projects.length) return <div style={{ color: 'var(--text3)', padding: 24, textAlign: 'center' }}>No projects found.</div>
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 15 }}>Project Groups</div>
+          <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 4 }}>Assign each project to a group. Lab users will only see projects matching their own group.</div>
+        </div>
+        <button className="btn btn-primary btn-sm" onClick={saveAll} disabled={saving}>{saving ? 'Saving…' : 'Save all'}</button>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {projects.map(p => (
+          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 16px' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 500, fontSize: 14 }}>{p.name}</div>
+              {p.project_id && <div style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{p.project_id}</div>}
+            </div>
+            <select value={groups[p.id] || ''} onChange={e => setGroups(g => ({ ...g, [p.id]: e.target.value }))}
+              style={{ width: 160, fontSize: 13 }}>
+              <option value="">— No group —</option>
+              {PROJECT_GROUPS.map(g => <option key={g}>{g}</option>)}
+            </select>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function AdminProfile() {
   const { session, toast } = useAppStore()
   const isOrgAdmin = !!session?.userId   // false = super admin (userId null)
@@ -585,6 +642,7 @@ function AdminProfile() {
     { key: 'admin',    label: '🔑 Admin Settings' },
     { key: 'students', label: '👥 Lab Users' },
     { key: 'staff',    label: '👨‍💼 Lab Managers' },
+    { key: 'groups',   label: '📁 Project Groups' },
     { key: 'icons',    label: '🖼️ Icon Images' },
     { key: 'dashboard',label: '🎛️ Dashboard Icons' },
     { key: 'notifs',   label: '🔔 Notifications' },
@@ -607,6 +665,7 @@ function AdminProfile() {
       {adminTab === 'admin'     && <AdminSettings session={session} toast={toast} />}
       {adminTab === 'students'  && <StudentsPanel toast={toast} session={session} />}
       {adminTab === 'staff'     && <StaffPanel toast={toast} session={session} />}
+      {adminTab === 'groups'    && <ProjectGroupsPanel session={session} />}
       {adminTab === 'icons'     && <IconImageManager toast={toast} />}
       {adminTab === 'dashboard' && <DashboardIconsPanel session={session} />}
       {adminTab === 'notifs'    && <NotificationPrefsPanel userId={session?.userId} role="admin" />}
@@ -1032,6 +1091,7 @@ function StaffProfile({ session }) {
           { key: 'info',      label: '👤 My Profile' },
           { key: 'students',  label: '👥 Lab Users' },
           { key: 'staff',     label: '👨‍💼 Lab Managers' },
+          { key: 'groups',    label: '📁 Project Groups' },
           { key: 'dashboard', label: '🎛️ Dashboard Icons' },
           { key: 'notifs',    label: '🔔 Notifications' },
           { key: 'team',      label: '🤝 Project Team' },
@@ -1045,6 +1105,7 @@ function StaffProfile({ session }) {
       {activeTab === 'info'      && <UserProfileForm session={session} toast={toast} />}
       {activeTab === 'students'  && <StudentsPanel toast={toast} session={session} />}
       {activeTab === 'staff'     && <StaffListPanel toast={toast} session={session} />}
+      {activeTab === 'groups'    && <ProjectGroupsPanel session={session} />}
       {activeTab === 'dashboard' && <DashboardIconsPanel session={session} />}
       {activeTab === 'notifs'    && <NotificationPrefsPanel userId={session?.userId} role="user" />}
       {activeTab === 'team'      && <TeamMembersPanel session={session} />}

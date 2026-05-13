@@ -73,14 +73,6 @@ function ProjectInfo({ project, users, onSaved, isSolo, readOnly }) {
           </select>
         </div>
       </div>
-      {!isSolo && (
-        <div className="field"><label>Project Group</label>
-          <select value={form.project_group} onChange={e => setForm(f => ({ ...f, project_group: e.target.value }))}>
-            <option value="">— All groups —</option>
-            <option>Material</option><option>Sustainability</option><option>GPR</option><option>Mechanic</option><option>Other</option>
-          </select>
-        </div>
-      )}
       <div className="grid-2">
         <div className="field"><label>Sampling Date</label><input type="date" value={form.sampling_date} onChange={e => setForm(f => ({ ...f, sampling_date: e.target.value }))} /></div>
         <div className="field"><label>Storage Date</label><input type="date" value={form.storage_date} onChange={e => setForm(f => ({ ...f, storage_date: e.target.value }))} /></div>
@@ -150,14 +142,6 @@ function NewProjectModal({ users, isSolo, soloOwnerId, onClose, onCreated }) {
           </select>
         </div>
       </div>
-      {!isSolo && (
-        <div className="field"><label>Project Group</label>
-          <select value={form.project_group} onChange={e => setForm(f => ({ ...f, project_group: e.target.value }))}>
-            <option value="">— All groups —</option>
-            <option>Material</option><option>Sustainability</option><option>GPR</option><option>Mechanic</option><option>Other</option>
-          </select>
-        </div>
-      )}
       <div className="grid-2">
         <div className="field"><label>Sampling Date</label><input type="date" value={form.sampling_date} onChange={e => setForm(f => ({ ...f, sampling_date: e.target.value }))} /></div>
         <div className="field"><label>Storage Date</label><input type="date" value={form.storage_date} onChange={e => setForm(f => ({ ...f, storage_date: e.target.value }))} /></div>
