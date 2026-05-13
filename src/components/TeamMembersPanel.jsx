@@ -13,10 +13,19 @@ async function sendNotification(userId, type, title, body) {
   await sb.from('notifications').insert({ user_id: userId, type, title, body, read: false })
 }
 
+// Returns display name for a user row: "FirstName LastName" or nickname hint
+function displayName(u) {
+  const first = u.email || ''   // first name is stored in the email column for students
+  const last  = u.name  || ''
+  const full  = [first, last].filter(Boolean).join(' ') || last || 'Unknown'
+  return u.nickname ? `${full} "${u.nickname}"` : full
+}
+
 export default function TeamMembersPanel({ session }) {
   const { toast } = useAppStore()
   const [orgUsers, setOrgUsers] = useState([])
-  const [selectedUserId, setSelectedUserId] = useState('')
+  const [search, setSearch] = useState('')
+  const [selectedUser, setSelectedUser] = useState(null)
   const [sending, setSending] = useState(false)
   const [outgoing, setOutgoing] = useState([])
   const [incoming, setIncoming] = useState([])
@@ -29,7 +38,7 @@ export default function TeamMembersPanel({ session }) {
     if (!session?.userId || !session?.organizationId) return
 
     const { data: users } = await sb.from('users')
-      .select('id, name, role')
+      .select('id, name, email, nickname, role')
       .eq('organization_id', session.organizationId)
       .eq('is_active', true)
       .neq('id', session.userId)
@@ -92,14 +101,14 @@ export default function TeamMembersPanel({ session }) {
   }
 
   async function sendInvite() {
-    if (!selectedUserId) return
-    if (outgoing.some(i => i.invitee_id === selectedUserId && i.status !== 'declined')) {
+    if (!selectedUser) return
+    if (outgoing.some(i => i.invitee_id === selectedUser.id && i.status !== 'declined')) {
       toast('Already invited this person.'); return
     }
     setSending(true)
     const { error } = await sb.from('team_workspace_invites').insert({
       inviter_id: session.userId,
-      invitee_id: selectedUserId,
+      invitee_id: selectedUser.id,
       organization_id: session.organizationId,
       status: 'pending',
     })
@@ -110,13 +119,14 @@ export default function TeamMembersPanel({ session }) {
     }
     const inviterName = firstName(session.username)
     await sendNotification(
-      selectedUserId,
+      selectedUser.id,
       'team_invite',
       `${inviterName} invited you to their project team`,
       'Open Profile → Project Team to accept or decline.'
     )
     toast('Invite sent!')
-    setSelectedUserId('')
+    setSelectedUser(null)
+    setSearch('')
     setSending(false)
     load()
   }
@@ -183,6 +193,15 @@ export default function TeamMembersPanel({ session }) {
   ])
   const availableUsers = orgUsers.filter(u => !alreadyInvitedOrMember.has(u.id))
 
+  const q = search.trim().toLowerCase()
+  const searchResults = q.length > 0 && !selectedUser
+    ? availableUsers.filter(u =>
+        (u.name     || '').toLowerCase().includes(q) ||
+        (u.email    || '').toLowerCase().includes(q) ||
+        (u.nickname || '').toLowerCase().includes(q)
+      )
+    : []
+
   const rowStyle = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--surface2)', gap: 12, flexWrap: 'wrap' }
 
   return (
@@ -210,24 +229,47 @@ export default function TeamMembersPanel({ session }) {
       <div className="card" style={{ marginBottom: 20 }}>
         <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Invite a team member</div>
         <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 14, lineHeight: 1.6 }}>
-          Select a lab user from your organization. They will receive a notification to accept or decline.
+          Search by first name, last name, or nickname.
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)} style={{ flex: 1 }}>
-            <option value="">Select a person…</option>
-            {availableUsers.map(u => (
-              <option key={u.id} value={u.id}>
-                {firstName(u.name)} ({u.role === 'user' ? 'Lab Manager' : 'Lab User'})
-              </option>
-            ))}
-          </select>
-          <button onClick={sendInvite} disabled={sending || !selectedUserId} className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>
-            {sending ? 'Sending…' : 'Invite'}
-          </button>
-        </div>
-        {availableUsers.length === 0 && orgUsers.length > 0 && (
-          <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 8 }}>All org members have been invited or added.</div>
+
+        {selectedUser ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <div style={{ flex: 1, background: 'var(--surface2)', borderRadius: 'var(--radius)', padding: '10px 14px', fontSize: 14 }}>
+              <span style={{ fontWeight: 600 }}>{displayName(selectedUser)}</span>
+              <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text3)' }}>{selectedUser.role === 'user' ? 'Lab Manager' : 'Lab User'}</span>
+            </div>
+            <button className="btn btn-sm" onClick={() => { setSelectedUser(null); setSearch('') }}>✕</button>
+            <button onClick={sendInvite} disabled={sending} className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>
+              {sending ? 'Sending…' : 'Invite'}
+            </button>
+          </div>
+        ) : (
+          <div style={{ position: 'relative' }}>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Type a name or nickname…"
+              style={{ width: '100%', boxSizing: 'border-box' }}
+            />
+            {searchResults.length > 0 && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, maxHeight: 220, overflowY: 'auto', marginTop: 4 }}>
+                {searchResults.map(u => (
+                  <div key={u.id} onClick={() => { setSelectedUser(u); setSearch('') }}
+                    style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--surface2)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    <span style={{ fontWeight: 500, fontSize: 14 }}>{displayName(u)}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 8, flexShrink: 0 }}>{u.role === 'user' ? 'Lab Manager' : 'Lab User'}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {q.length > 0 && searchResults.length === 0 && (
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 6 }}>No matching users found.</div>
+            )}
+          </div>
         )}
+
         {orgUsers.length === 0 && (
           <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 8 }}>No other users found in your organization.</div>
         )}
