@@ -933,14 +933,15 @@ export default function TrainingRecords() {
     if (data?.length) setExpiryAlerts(data)
   }
 
+  const isSolo = session?.loginMode === 'solo'
   const subTabs = [
     { key: 'fresh',     label: '1 · Fresh Student' },
-    { key: 'golf',      label: '2 · Golf Car' },
-    { key: 'equipment', label: '3 · Equipment' },
-    { key: 'alarm',     label: '4 · Building Alarm' },
+    ...(!isSolo ? [{ key: 'golf',  label: '2 · Golf Car' }] : []),
+    { key: 'equipment', label: isSolo ? '2 · Equipment' : '3 · Equipment' },
+    ...(!isSolo ? [{ key: 'alarm', label: '4 · Building Alarm' }] : []),
     ...(canEdit(session) ? [{ key: 'requests', label: '📋 Training Requests' }] : []),
-    { key: 'exam',      label: '📝 Exam' },
-    { key: 'locker',    label: '🗄️ Student Locker' },
+    ...(!isSolo ? [{ key: 'exam',   label: '📝 Exam' }] : []),
+    ...(!isSolo ? [{ key: 'locker', label: '🗄️ Student Locker' }] : []),
   ]
 
   return (
