@@ -46,7 +46,7 @@ export function TrainingRequestsPanel({ session }) {
   async function load() {
     setLoading(true)
     const [{ data: reqs }, { data: sched }, { data: eq }] = await Promise.all([
-      sb.from('retraining_requests').select('*').order('requested_at', { ascending: false }),
+      sb.from('retraining_requests').select('*').order('id', { ascending: false }),
       sb.from('training_schedule').select('*').order('created_at', { ascending: false }),
       sb.from('equipment_inventory').select('id, equipment_name, nickname').eq('is_active', true),
     ])
@@ -72,17 +72,27 @@ export function TrainingRequestsPanel({ session }) {
       status: 'proposed', notes: proposeNotes || null,
       updated_at: new Date().toISOString(),
     }
+    let schedErr
     if (sched) {
-      await sb.from('training_schedule').update(payload).eq('id', sched.id)
+      const { error } = await sb.from('training_schedule').update(payload).eq('id', sched.id)
+      schedErr = error
     } else {
-      await sb.from('training_schedule').insert(payload)
+      const { error } = await sb.from('training_schedule').insert(payload)
+      schedErr = error
     }
-    // Notify user
-    await sb.from('booking_notifications').insert({
+    if (schedErr) { toast('Error saving schedule: ' + schedErr.message); setSaving(false); return }
+
+    // Remove the request once a date is proposed
+    await sb.from('retraining_requests').delete().eq('id', req.id)
+
+    // Notify user — in-app + email
+    const notifMsg = `Training proposed for ${req.equipment_name} on ${fmtDT(proposeDate)} by ${session.username}. Please open Training Records to confirm or propose another time.`
+    const { error: notifErr } = await sb.from('booking_notifications').insert({
       booking_id: null, user_id: req.user_id, type: 'training_scheduled',
-      message: `Training scheduled for ${req.equipment_name} on ${fmtDT(proposeDate)} by ${session.username}. Please confirm or propose another time in Training Records.`,
-      read: false,
+      message: notifMsg, read: false,
     })
+    if (notifErr) console.warn('Notification insert failed:', notifErr.message)
+    await sendTrainingEmail(req.user_id, 'training_approved', `Training date proposed — ${req.equipment_name}`, 'A training date has been proposed for you', notifMsg)
     toast('Training date proposed ✓')
     setProposing(null); setProposeDate(''); setProposeNotes('')
     setSaving(false); load()
@@ -121,7 +131,7 @@ export function TrainingRequestsPanel({ session }) {
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{req.user_name}</div>
                     <div style={{ fontSize: 12, color: 'var(--text3)' }}>
-                      {eq?.nickname || req.equipment_name} · Requested {new Date(req.requested_at).toLocaleDateString()}
+                      {eq?.nickname || req.equipment_name}{req.requested_at ? ` · Requested ${new Date(req.requested_at).toLocaleDateString()}` : ''}
                       {req.notes && <span> · "{req.notes}"</span>}
                     </div>
                   </div>
