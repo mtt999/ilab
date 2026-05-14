@@ -3,6 +3,26 @@ import React from 'react'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { sb } from '../../lib/supabase'
 import { useAppStore } from '../../store/useAppStore'
+import { buildEmailHtml } from '../../lib/emailTemplate'
+
+async function sendBookingEmail(userId, type, subject, title, body) {
+  if (!userId) return
+  const { data: prefs } = await sb.from('notification_prefs').select('*').eq('user_id', userId).maybeSingle()
+  if (!prefs || prefs[`email_${type}`] !== true) return
+  const { data: user } = await sb.from('users').select('phone, email').eq('id', userId).maybeSingle()
+  const toEmail = user?.phone || user?.email
+  if (!toEmail) return
+  const htmlBody = buildEmailHtml({
+    title, body,
+    ctaLabel: 'View Booking in iLab →',
+    ctaUrl: 'https://mtt999.github.io/ilab/',
+    prefsUrl: 'https://mtt999.github.io/ilab/',
+  })
+  const { error } = await sb.from('email_notifications_queue').insert({
+    to_email: toEmail, subject, body, html_body: htmlBody, user_id: userId, type,
+  })
+  if (error) console.warn('Booking email queue failed:', error.message)
+}
 
 function canEdit(s) { return s?.role === 'admin' || s?.role === 'user' }
 
@@ -139,6 +159,17 @@ function BookingModal({ booking, equipmentList, selectedEquipment, session, onSa
     } else {
       await sb.from('equipment_bookings').insert(payload)
       toast(requiresApproval ? 'Booking submitted — pending approval.' : 'Booking confirmed ✓')
+      if (!requiresApproval) {
+        const eqName = equipmentList.find(e => e.id === form.equipment_id)?.nickname || 'equipment'
+        const when = fmtDateTime(form.start_time)
+        await sendBookingEmail(
+          session.userId,
+          'booking_confirmed',
+          `Booking confirmed — ${eqName}`,
+          `Your booking is confirmed`,
+          `Your booking for ${eqName} on ${when} has been confirmed. See you then!`
+        )
+      }
     }
     setSaving(false); onSave(); onClose()
   }
@@ -869,14 +900,32 @@ function BookingCalendar({ session }) {
 
   async function handleDeny(booking, reason) {
     await sb.from('equipment_bookings').update({ status: 'denied', denied_by: session.username, denied_reason: reason, updated_at: new Date().toISOString() }).eq('id', booking.id)
-    // Create notification
-    await sb.from('booking_notifications').insert({ booking_id: booking.id, user_id: booking.user_id, type: 'denied', message: `Your booking for ${equipment.find(e => e.id === booking.equipment_id)?.nickname || 'equipment'} on ${fmtDateTime(booking.start_time)} was denied.${reason ? ` Reason: ${reason}` : ''}` })
+    const eqName = equipment.find(e => e.id === booking.equipment_id)?.nickname || 'equipment'
+    const when = fmtDateTime(booking.start_time)
+    const denyMsg = `Your booking for ${eqName} on ${when} was denied.${reason ? ` Reason: ${reason}` : ''}`
+    await sb.from('booking_notifications').insert({ booking_id: booking.id, user_id: booking.user_id, type: 'denied', message: denyMsg })
+    await sendBookingEmail(
+      booking.user_id,
+      'booking_confirmed',
+      `Booking denied — ${eqName}`,
+      `Your booking was not approved`,
+      denyMsg
+    )
     toast('Booking denied.'); setDetailBooking(null); loadBookings()
   }
 
   async function handleApprove(booking) {
     await sb.from('equipment_bookings').update({ status: 'confirmed', updated_at: new Date().toISOString() }).eq('id', booking.id)
-    await sb.from('booking_notifications').insert({ booking_id: booking.id, user_id: booking.user_id, type: 'approved', message: `Your booking for ${equipment.find(e => e.id === booking.equipment_id)?.nickname || 'equipment'} on ${fmtDateTime(booking.start_time)} was approved.` })
+    const eqName = equipment.find(e => e.id === booking.equipment_id)?.nickname || 'equipment'
+    const when = fmtDateTime(booking.start_time)
+    await sb.from('booking_notifications').insert({ booking_id: booking.id, user_id: booking.user_id, type: 'approved', message: `Your booking for ${eqName} on ${when} was approved.` })
+    await sendBookingEmail(
+      booking.user_id,
+      'booking_confirmed',
+      `Booking approved — ${eqName}`,
+      `Your booking has been approved`,
+      `Your booking for ${eqName} on ${when} was approved by ${session.username}. See you then!`
+    )
     toast('Booking approved ✓'); setDetailBooking(null); loadBookings()
   }
 

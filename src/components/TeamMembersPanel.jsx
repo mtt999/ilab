@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { sb } from '../lib/supabase'
 import { useAppStore } from '../store/useAppStore'
+import { buildEmailHtml } from '../lib/emailTemplate'
 
 function firstName(name) {
   return name?.split(' ')[0] || name || 'Unknown'
@@ -21,10 +22,18 @@ async function sendNotification(userId, type, title, body) {
     const { data: recipient } = await sb.from('users').select('phone, email').eq('id', userId).maybeSingle()
     const recipientEmail = recipient?.phone || recipient?.email // phone stores actual email for students
     if (recipientEmail) {
+      const htmlBody = buildEmailHtml({
+        title,
+        body,
+        ctaLabel: 'View Invite in iLab →',
+        ctaUrl: 'https://mtt999.github.io/ilab/',
+        prefsUrl: 'https://mtt999.github.io/ilab/',
+      })
       await sb.from('email_notifications_queue').insert({
         to_email: recipientEmail,
         subject: title,
         body,
+        html_body: htmlBody,
         user_id: userId,
         type,
       }).then(({ error: emailErr }) => {

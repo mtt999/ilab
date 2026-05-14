@@ -116,6 +116,59 @@ function ModuleImagesPanel() {
 // Super admin: session.userId === null (logged in via /admin password)
 // Org admin:   session.userId !== null && session.role === 'admin'
 
+// ── Org Settings panel (org admin only) ──────────────────────
+function OrgSettingsPanel({ session }) {
+  const { toast } = useAppStore()
+  const [form, setForm] = useState({ contact_name: '', contact_email: '' })
+  const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!session?.organizationId) { setLoading(false); return }
+    sb.from('organizations').select('contact_name, contact_email').eq('id', session.organizationId).maybeSingle()
+      .then(({ data }) => {
+        if (data) setForm({ contact_name: data.contact_name || '', contact_email: data.contact_email || '' })
+        setLoading(false)
+      })
+  }, [session?.organizationId])
+
+  async function save() {
+    if (!session?.organizationId) return
+    if (!form.contact_email.trim()) { toast('Contact email is required.'); return }
+    setSaving(true)
+    const { error } = await sb.from('organizations').update({
+      contact_name: form.contact_name.trim() || null,
+      contact_email: form.contact_email.trim().toLowerCase(),
+    }).eq('id', session.organizationId)
+    if (error) { toast('Error saving: ' + error.message); setSaving(false); return }
+    toast('Organization contact info saved ✓')
+    setSaving(false)
+  }
+
+  if (loading) return <div style={{ textAlign: 'center', padding: 40 }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
+
+  return (
+    <div className="card" style={{ maxWidth: 480 }}>
+      <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>🏢 Organization Contact Info</div>
+      <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 20 }}>
+        This contact name and email appear on the login page when a lab member asks for help signing in.
+      </div>
+      <div className="field">
+        <label>Contact person's name</label>
+        <input value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} placeholder="e.g. Dr. Smith" />
+      </div>
+      <div className="field">
+        <label>Contact email address *</label>
+        <input type="email" value={form.contact_email} onChange={e => setForm(f => ({ ...f, contact_email: e.target.value }))} placeholder="admin@yourlab.edu" />
+        <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>Shown on the login page and used as the reply-to address in notification emails.</div>
+      </div>
+      <button className="btn btn-primary" onClick={save} disabled={saving}>
+        {saving ? 'Saving…' : 'Save contact info'}
+      </button>
+    </div>
+  )
+}
+
 // ── User modal ────────────────────────────────────────────────
 function UserModal({ user, orgs, defaultOrgId, isSuperAdmin, defaultRole, onClose, onSaved }) {
   const { toast } = useAppStore()
@@ -365,7 +418,7 @@ export default function Admin() {
   // Super admin: images tab is accessed standalone (no tab bar), so exclude it from the tab list
   const tabs = isSuperAdmin
     ? [{ key: 'orgadmins', label: 'Org Admins' }, { key: 'organizations', label: 'Organizations' }]
-    : [{ key: 'users', label: 'Users' }, { key: 'students', label: 'Lab Users' }, { key: 'images', label: 'Module Images' }]
+    : [{ key: 'users', label: 'Users' }, { key: 'students', label: 'Lab Users' }, { key: 'images', label: 'Module Images' }, { key: 'orgsettings', label: 'Org Settings' }]
 
   useEffect(() => { loadOrgs() }, [])
   useEffect(() => {
@@ -548,6 +601,9 @@ export default function Admin() {
 
       {/* ── MODULE IMAGES ── */}
       {tab === 'images' && <ModuleImagesPanel />}
+
+      {/* ── ORG SETTINGS (org admin only) ── */}
+      {!isSuperAdmin && tab === 'orgsettings' && <OrgSettingsPanel session={session} />}
 
       {/* ── ORGANIZATIONS (super admin only) ── */}
       {tab === 'organizations' && isSuperAdmin && (
