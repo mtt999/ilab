@@ -471,6 +471,7 @@ function WeekView({ weekStart, bookings, onSlotClick, onBookingClick, canBook })
               ].join(' ')
               return (
                 <div key={`${b.id}-${di}`}
+                  onMouseDown={e => e.stopPropagation()}
                   onClick={e => { e.stopPropagation(); onBookingClick(b) }}
                   style={{ position: 'absolute', top: seg.top + 1, left: 2, right: 2, height: seg.height, background: statusBg[b.status], border: `1px solid ${statusColor[b.status]}50`, borderLeft: `3px solid ${statusColor[b.status]}`, borderRadius: br, padding: '2px 5px', fontSize: 10, overflow: 'hidden', zIndex: 2, cursor: 'pointer' }}>
                   {seg.isStart && (
@@ -528,7 +529,7 @@ function MonthView({ monthDate, bookings, onDayClick, onBookingClick }) {
               onMouseLeave={e => { if (!isToday) e.currentTarget.style.background = isCurrentMonth ? 'var(--surface)' : 'var(--surface2)' }}>
               <div style={{ fontWeight: isToday ? 700 : 400, fontSize: 13, color: isToday ? 'var(--accent)' : isCurrentMonth ? 'var(--text)' : 'var(--text3)', marginBottom: 2 }}>{day.getDate()}</div>
               {dayBookings.slice(0, 3).map(b => (
-                <div key={b.id} onClick={e => { e.stopPropagation(); onBookingClick(b) }}
+                <div key={b.id} onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onBookingClick(b) }}
                   style={{ fontSize: 10, background: statusBg[b.status], color: statusColor[b.status], borderRadius: 3, padding: '1px 4px', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}>
                   {fmtTime(b.start_time)} {b.booked_on_behalf_of || b.user_name}
                 </div>
