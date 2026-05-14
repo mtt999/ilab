@@ -943,6 +943,14 @@ function StaffListPanel({ toast, session }) {
 
 function StaffModal({ staff, onClose, onSave, onRoleChange }) {
   const [form, setForm] = useState(staff ? { name: staff.name||'', password: '', email: staff.email||'', phone: staff.phone||'' } : { name: '', password: '', email: '', phone: '' })
+  const [confirmDowngrade, setConfirmDowngrade] = useState(false)
+
+  function handleRoleClick(opt) {
+    if (opt.role === staff.role) return
+    if (opt.role === 'student') { setConfirmDowngrade(true); return }
+    onRoleChange(staff, opt.role); onClose()
+  }
+
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.35)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
       <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:28, maxWidth:480, width:'100%', border:'1px solid var(--border)' }}>
@@ -962,10 +970,23 @@ function StaffModal({ staff, onClose, onSave, onRoleChange }) {
               {[{ label: 'Lab Manager', role: 'user' }, { label: 'Lab User', role: 'student' }].map(opt => (
                 <button key={opt.role}
                   className={`btn btn-sm${staff.role === opt.role ? ' btn-primary' : ''}`}
-                  onClick={() => { onRoleChange(staff, opt.role); onClose() }}>
+                  onClick={() => handleRoleClick(opt)}>
                   {opt.label}
                 </button>
               ))}
+            </div>
+          </div>
+        )}
+        {confirmDowngrade && (
+          <div style={{ background:'#fff8f0', border:'1.5px solid #f59e0b', borderRadius:'var(--radius)', padding:'14px 16px', marginBottom:12 }}>
+            <div style={{ fontWeight:600, fontSize:14, marginBottom:6, color:'#92400e' }}>⚠️ Change role to Lab User?</div>
+            <div style={{ fontSize:13, color:'#78350f', lineHeight:1.6, marginBottom:12 }}>
+              By changing the role, this user will become a lab user and will be listed under the Lab Users tab. All lab manager access will be removed. Do you still want to change the role?
+            </div>
+            <div style={{ display:'flex', gap:8 }}>
+              <button className="btn btn-sm btn-primary" style={{ background:'#d97706', borderColor:'#d97706' }}
+                onClick={() => { onRoleChange(staff, 'student'); onClose() }}>Yes, change role</button>
+              <button className="btn btn-sm" onClick={() => setConfirmDowngrade(false)}>No, keep as Lab Manager</button>
             </div>
           </div>
         )}
