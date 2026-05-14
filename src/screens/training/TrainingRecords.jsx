@@ -97,7 +97,7 @@ function FreshTraining({ students, session }) {
 
   return (
     <div>
-      <SectionHeader title="Fresh Student Training" count={students.length} />
+      <SectionHeader title="Lab User Documents" count={students.length} />
       <div style={{ overflowX: 'auto' }}>
         <table>
           <thead>
@@ -935,7 +935,7 @@ export default function TrainingRecords() {
 
   const isSolo = session?.loginMode === 'solo'
   const subTabs = [
-    { key: 'fresh',     label: '1 · Fresh Student' },
+    { key: 'fresh',     label: '1 · Lab User Documents' },
     ...(!isSolo ? [{ key: 'golf',  label: '2 · Golf Car' }] : []),
     { key: 'equipment', label: isSolo ? '2 · Equipment' : '3 · Equipment' },
     ...(!isSolo ? [{ key: 'alarm', label: '4 · Building Alarm' }] : []),
