@@ -931,10 +931,19 @@ function BookingCalendar({ session }) {
 
   async function handleCancel(booking) {
     if (!confirm('Cancel this booking?')) return
-    setDetailBooking(null) // close modal immediately
+    setDetailBooking(null)
     await sb.from('equipment_bookings').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('id', booking.id)
+    const eqName = equipment.find(e => e.id === booking.equipment_id)?.nickname || 'equipment'
+    const when = fmtDateTime(booking.start_time)
+    await sendBookingEmail(
+      booking.user_id,
+      'booking_cancelled',
+      `Booking cancelled — ${eqName}`,
+      'Your booking has been cancelled',
+      `Your booking for ${eqName} on ${when} has been cancelled.`
+    )
     toast('Booking cancelled.')
-    loadBookings() // refresh calendar — cancelled slot now free
+    loadBookings()
   }
 
   const filteredEq = equipment.filter(e => {

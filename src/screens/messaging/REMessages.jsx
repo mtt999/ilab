@@ -1,6 +1,21 @@
 import { useState, useEffect, useRef } from 'react'
 import { sb } from '../../lib/supabase'
 import { useAppStore } from '../../store/useAppStore'
+import { buildEmailHtml } from '../../lib/emailTemplate'
+
+async function sendMessageEmail(userId, senderName, messageBody) {
+  if (!userId) return
+  const { data: prefs } = await sb.from('notification_prefs').select('*').eq('user_id', userId).maybeSingle()
+  if (!prefs || prefs['email_message_reply'] !== true) return
+  const { data: user } = await sb.from('users').select('phone, email').eq('id', userId).maybeSingle()
+  const toEmail = user?.phone || user?.email
+  if (!toEmail) return
+  const title = `New message from ${senderName}`
+  const body = messageBody.slice(0, 200) + (messageBody.length > 200 ? '…' : '')
+  const htmlBody = buildEmailHtml({ title, body, ctaLabel: 'View Message in iLab →', ctaUrl: 'https://mtt999.github.io/ilab/', prefsUrl: 'https://mtt999.github.io/ilab/' })
+  const { error } = await sb.from('email_notifications_queue').insert({ to_email: toEmail, subject: title, body, html_body: htmlBody, user_id: userId, type: 'message_reply' })
+  if (error) console.warn('Message email queue failed:', error.message)
+}
 
 function canEdit(s) { return s?.role === 'admin' || s?.role === 'user' }
 
@@ -46,6 +61,9 @@ function ComposeForm({ session, staff, onSent, onCancel }) {
       receiver_name: receiver?.name || (isAdmin || isStaff ? 'All Staff' : null),
       subject: form.subject || null, body: form.body.trim(), file_url: fileUrl, file_name: fileName,
     })
+    if (form.receiverId) {
+      await sendMessageEmail(form.receiverId, session.username, form.body.trim())
+    }
     toast('Message sent ✓')
     setForm({ receiverId: '', subject: '', body: '' }); setFile(null); setSending(false)
     onSent()

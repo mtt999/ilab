@@ -1,6 +1,19 @@
 import { useState, useEffect, useRef } from 'react'
 import { sb } from '../../lib/supabase'
 import { useAppStore } from '../../store/useAppStore'
+import { buildEmailHtml } from '../../lib/emailTemplate'
+
+async function sendTrainingEmail(userId, prefKey, subject, title, body) {
+  if (!userId) return
+  const { data: prefs } = await sb.from('notification_prefs').select('*').eq('user_id', userId).maybeSingle()
+  if (!prefs || prefs[`email_${prefKey}`] !== true) return
+  const { data: user } = await sb.from('users').select('phone, email').eq('id', userId).maybeSingle()
+  const toEmail = user?.phone || user?.email
+  if (!toEmail) return
+  const htmlBody = buildEmailHtml({ title, body, ctaLabel: 'View Training in iLab →', ctaUrl: 'https://mtt999.github.io/ilab/', prefsUrl: 'https://mtt999.github.io/ilab/' })
+  const { error } = await sb.from('email_notifications_queue').insert({ to_email: toEmail, subject, body, html_body: htmlBody, user_id: userId, type: prefKey })
+  if (error) console.warn('Training email queue failed:', error.message)
+}
 
 function canEdit(s) { return s?.role === 'admin' || s?.role === 'user' }
 
@@ -72,13 +85,12 @@ export function TrainingRequestsPanel({ session }) {
 
   async function confirmSchedule(sched) {
     await sb.from('training_schedule').update({ status: 'confirmed', confirmed_date: sched.counter_date || sched.proposed_date, updated_at: new Date().toISOString() }).eq('id', sched.id)
-    // Notify user with equipment link
     const eq = equipment.find(e => e.id === sched.equipment_id)
-    await sb.from('booking_notifications').insert({
-      booking_id: null, user_id: sched.user_id, type: 'training_confirmed',
-      message: `Training confirmed for ${eq?.nickname || eq?.equipment_name} on ${fmtDT(sched.counter_date || sched.proposed_date)}. Please review the SOP and training videos before your session.`,
-      read: false,
-    })
+    const eqName = eq?.nickname || eq?.equipment_name || 'equipment'
+    const when = fmtDT(sched.counter_date || sched.proposed_date)
+    const msg = `Training confirmed for ${eqName} on ${when}. Please review the SOP and training videos before your session.`
+    await sb.from('booking_notifications').insert({ booking_id: null, user_id: sched.user_id, type: 'training_confirmed', message: msg, read: false })
+    await sendTrainingEmail(sched.user_id, 'training_approved', `Training confirmed — ${eqName}`, 'Your training has been confirmed', msg)
     toast('Training confirmed ✓'); load()
   }
 

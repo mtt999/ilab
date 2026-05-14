@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx-js-style'
 import { useState, useEffect, useRef } from 'react'
 import { sb } from '../../lib/supabase'
 import { useAppStore } from '../../store/useAppStore'
+import { buildEmailHtml } from '../../lib/emailTemplate'
 
 const BLUE = '#0d47a1'
 const ORANGE = '#ff6b00'
@@ -30,8 +31,18 @@ function progressColor(pct) {
 async function sendNotification(userId, type, title, body, taskId = null) {
   if (!userId) return
   const { data: prefs } = await sb.from('notification_prefs').select('*').eq('user_id', userId).maybeSingle()
-  if (prefs && prefs[type] === false) return
-  await sb.from('notifications').insert({ user_id: userId, type, title, body, task_id: taskId, read: false })
+  if (!prefs || prefs[type] !== false) {
+    await sb.from('notifications').insert({ user_id: userId, type, title, body, task_id: taskId, read: false })
+  }
+  if (prefs && prefs[`email_${type}`] === true) {
+    const { data: user } = await sb.from('users').select('phone, email').eq('id', userId).maybeSingle()
+    const toEmail = user?.phone || user?.email
+    if (toEmail) {
+      const htmlBody = buildEmailHtml({ title, body, ctaLabel: 'View Task in iLab →', ctaUrl: 'https://mtt999.github.io/ilab/', prefsUrl: 'https://mtt999.github.io/ilab/' })
+      await sb.from('email_notifications_queue').insert({ to_email: toEmail, subject: title, body, html_body: htmlBody, user_id: userId, type })
+        .then(({ error }) => { if (error) console.warn('PM email queue failed:', error.message) })
+    }
+  }
 }
 
 function ProgressCircle({ progress, onChange }) {
