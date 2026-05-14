@@ -892,7 +892,7 @@ function StaffListPanel({ toast, session }) {
   const [showModal, setShowModal] = useState(false)
   const [editStaff, setEditStaff] = useState(null)
   useEffect(() => { load() }, [])
-  async function load() { setLoading(true); const { data } = await sb.from('users').select('*').eq('role', 'user').order('name'); setStaff(data || []); setLoading(false) }
+  async function load() { setLoading(true); const { data } = await sb.from('users').select('*').in('role', ['user', 'admin']).order('name'); setStaff(data || []); setLoading(false) }
   async function saveStaff(form, id) {
     if (!form.name.trim()) { toast('Name is required.'); return }
     if (!id && !form.password) { toast('Password is required.'); return }
@@ -908,7 +908,7 @@ function StaffListPanel({ toast, session }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div style={{ fontSize: 14, color: 'var(--text2)' }}>{staff.length} lab manager{staff.length !== 1 ? 's' : ''}</div>
+        <div style={{ fontSize: 14, color: 'var(--text2)' }}>{staff.length} lab manager{staff.length !== 1 ? 's' : ''} &amp; org admin{staff.filter(s=>s.role==='admin').length !== 1 ? 's' : ''}</div>
         <button className="btn btn-sm btn-primary" onClick={() => { setEditStaff(null); setShowModal(true) }}>+ Add lab manager</button>
       </div>
       {loading ? <div style={{ textAlign: 'center', padding: 24 }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
@@ -919,7 +919,7 @@ function StaffListPanel({ toast, session }) {
               <div>
                 <div style={{ fontWeight: 600 }}>
                   <span style={{ fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--text3)', marginRight: 6 }}>#{idx+1}</span>
-                  {s.name}<span style={{ marginLeft: 8, fontSize: 11, background: '#fff3e0', color: '#ff6b00', borderRadius: 3, padding: '1px 6px', fontWeight: 600 }}>Lab Manager</span>
+                  {s.name}<span style={{ marginLeft: 8, fontSize: 11, background: s.role === 'admin' ? '#fce8ff' : '#fff3e0', color: s.role === 'admin' ? '#7e22ce' : '#ff6b00', borderRadius: 3, padding: '1px 6px', fontWeight: 600 }}>{s.role === 'admin' ? 'Org Admin' : 'Lab Manager'}</span>
                   {!s.is_active && <span style={{ fontSize: 11, color: 'var(--accent2)', marginLeft: 6 }}>Inactive</span>}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--mono)', display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 2 }}>
