@@ -1013,19 +1013,15 @@ function StudentLocker({ session }) {
   }
 
   async function toggleUnavailable(lockerNumber) {
-    const locker = lockers.find(l => l.locker_number === lockerNumber)
+    const locker = lockers.find(l => Number(l.locker_number) === lockerNumber)
     const nowUnavailable = !locker?.is_unavailable
     // Optimistic update so checkbox reflects immediately
     setLockers(prev => {
-      const exists = prev.find(l => l.locker_number === lockerNumber)
-      if (exists) return prev.map(l => l.locker_number === lockerNumber ? { ...l, is_unavailable: nowUnavailable } : l)
+      const exists = prev.find(l => Number(l.locker_number) === lockerNumber)
+      if (exists) return prev.map(l => Number(l.locker_number) === lockerNumber ? { ...l, is_unavailable: nowUnavailable } : l)
       return [...prev, { locker_number: lockerNumber, is_unavailable: nowUnavailable, user_id: null, user_name: null }]
     })
-    // Use update if row exists, insert if not — avoids needing a unique constraint
-    const { data: existing } = await sb.from('student_lockers').select('locker_number').eq('locker_number', lockerNumber).maybeSingle()
-    const { error } = existing
-      ? await sb.from('student_lockers').update({ is_unavailable: nowUnavailable }).eq('locker_number', lockerNumber)
-      : await sb.from('student_lockers').insert({ locker_number: lockerNumber, is_unavailable: nowUnavailable })
+    const { error } = await sb.from('student_lockers').update({ is_unavailable: nowUnavailable }).eq('locker_number', lockerNumber)
     if (error) { toast('Error: ' + error.message); load() }
   }
 
@@ -1034,6 +1030,10 @@ function StudentLocker({ session }) {
   const myLocker = session?.role === 'student'
     ? lockers.find(l => l.user_id === session.userId)
     : null
+
+  // Build a map keyed by number to avoid string vs number type mismatch from DB
+  const lockerMap = {}
+  lockers.forEach(l => { lockerMap[Number(l.locker_number)] = l })
 
   const assigned = lockers.filter(l => l.user_name).length
   const unavailableCount = lockers.filter(l => l.is_unavailable && !l.user_name).length
@@ -1082,7 +1082,7 @@ function StudentLocker({ session }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, maxWidth: 500, margin: '0 auto 28px' }}>
             {Array.from({ length: TOTAL_LOCKERS }, (_, i) => {
               const num = i + 1
-              const locker = lockers.find(l => l.locker_number === num) || { locker_number: num, user_name: null }
+              const locker = lockerMap[num] || { locker_number: num, user_name: null }
               const occupied = !!locker.user_name
               const unavailable = !!locker.is_unavailable && !occupied
               const isAssigning = assigning === num
@@ -1156,7 +1156,7 @@ function StudentLocker({ session }) {
               <tbody>
                 {Array.from({ length: TOTAL_LOCKERS }, (_, i) => {
                   const num = i + 1
-                  const locker = lockers.find(l => l.locker_number === num) || { locker_number: num, user_name: null }
+                  const locker = lockerMap[num] || { locker_number: num, user_name: null }
                   const student = locker.user_id ? students.find(s => s.id === locker.user_id) : null
                   const isUnavailable = !!locker.is_unavailable && !locker.user_name
                   return (
