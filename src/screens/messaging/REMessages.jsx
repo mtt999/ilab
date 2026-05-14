@@ -7,12 +7,17 @@ async function sendMessageEmail(userId, senderName, messageBody) {
   if (!userId) return
   const { data: prefs } = await sb.from('notification_prefs').select('*').eq('user_id', userId).maybeSingle()
   if (!prefs || prefs['email_message_reply'] !== true) return
-  const { data: user } = await sb.from('users').select('phone, email').eq('id', userId).maybeSingle()
+  const { data: user } = await sb.from('users').select('phone, email, organization_id').eq('id', userId).maybeSingle()
   const toEmail = user?.phone || user?.email
   if (!toEmail) return
+  let orgContact = null
+  if (user?.organization_id) {
+    const { data: org } = await sb.from('organizations').select('contact_name, contact_email').eq('id', user.organization_id).maybeSingle()
+    orgContact = org
+  }
   const title = `New message from ${senderName}`
   const body = messageBody.slice(0, 200) + (messageBody.length > 200 ? '…' : '')
-  const htmlBody = buildEmailHtml({ title, body, ctaLabel: 'View Message in iLab →', ctaUrl: 'https://mtt999.github.io/ilab/', prefsUrl: 'https://mtt999.github.io/ilab/' })
+  const htmlBody = buildEmailHtml({ title, body, ctaLabel: 'View Message in iLab →', ctaUrl: 'https://mtt999.github.io/ilab/', prefsUrl: 'https://mtt999.github.io/ilab/', orgContact })
   const { error } = await sb.from('email_notifications_queue').insert({ to_email: toEmail, subject: title, body, html_body: htmlBody, user_id: userId, type: 'message_reply' })
   if (error) console.warn('Message email queue failed:', error.message)
 }

@@ -19,26 +19,17 @@ async function sendNotification(userId, type, title, body) {
 
   // email notification (opt-in — only if user enabled it)
   if (prefs && prefs[`email_${type}`] === true) {
-    const { data: recipient } = await sb.from('users').select('phone, email').eq('id', userId).maybeSingle()
-    const recipientEmail = recipient?.phone || recipient?.email // phone stores actual email for students
+    const { data: recipient } = await sb.from('users').select('phone, email, organization_id').eq('id', userId).maybeSingle()
+    const recipientEmail = recipient?.phone || recipient?.email
     if (recipientEmail) {
-      const htmlBody = buildEmailHtml({
-        title,
-        body,
-        ctaLabel: 'View Invite in iLab →',
-        ctaUrl: 'https://mtt999.github.io/ilab/',
-        prefsUrl: 'https://mtt999.github.io/ilab/',
-      })
-      await sb.from('email_notifications_queue').insert({
-        to_email: recipientEmail,
-        subject: title,
-        body,
-        html_body: htmlBody,
-        user_id: userId,
-        type,
-      }).then(({ error: emailErr }) => {
-        if (emailErr) console.warn('Email queue insert failed:', emailErr.message)
-      })
+      let orgContact = null
+      if (recipient?.organization_id) {
+        const { data: org } = await sb.from('organizations').select('contact_name, contact_email').eq('id', recipient.organization_id).maybeSingle()
+        orgContact = org
+      }
+      const htmlBody = buildEmailHtml({ title, body, ctaLabel: 'View Invite in iLab →', ctaUrl: 'https://mtt999.github.io/ilab/', prefsUrl: 'https://mtt999.github.io/ilab/', orgContact })
+      await sb.from('email_notifications_queue').insert({ to_email: recipientEmail, subject: title, body, html_body: htmlBody, user_id: userId, type })
+        .then(({ error: emailErr }) => { if (emailErr) console.warn('Email queue insert failed:', emailErr.message) })
     }
   }
 }

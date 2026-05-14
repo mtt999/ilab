@@ -7,10 +7,15 @@ async function sendTrainingEmail(userId, prefKey, subject, title, body) {
   if (!userId) return
   const { data: prefs } = await sb.from('notification_prefs').select('*').eq('user_id', userId).maybeSingle()
   if (!prefs || prefs[`email_${prefKey}`] !== true) return
-  const { data: user } = await sb.from('users').select('phone, email').eq('id', userId).maybeSingle()
+  const { data: user } = await sb.from('users').select('phone, email, organization_id').eq('id', userId).maybeSingle()
   const toEmail = user?.phone || user?.email
   if (!toEmail) return
-  const htmlBody = buildEmailHtml({ title, body, ctaLabel: 'View Training in iLab →', ctaUrl: 'https://mtt999.github.io/ilab/', prefsUrl: 'https://mtt999.github.io/ilab/' })
+  let orgContact = null
+  if (user?.organization_id) {
+    const { data: org } = await sb.from('organizations').select('contact_name, contact_email').eq('id', user.organization_id).maybeSingle()
+    orgContact = org
+  }
+  const htmlBody = buildEmailHtml({ title, body, ctaLabel: 'View Training in iLab →', ctaUrl: 'https://mtt999.github.io/ilab/', prefsUrl: 'https://mtt999.github.io/ilab/', orgContact })
   const { error } = await sb.from('email_notifications_queue').insert({ to_email: toEmail, subject, body, html_body: htmlBody, user_id: userId, type: prefKey })
   if (error) console.warn('Training email queue failed:', error.message)
 }
