@@ -33,6 +33,10 @@ const IS_ADMIN_ROUTE = window.location.pathname.endsWith('/admin') || window.loc
 // Detect equipment scan from QR code: ?eq=<uuid>
 const SCAN_EQ_ID = new URLSearchParams(window.location.search).get('eq')
 
+// Deep-link from email notifications: ?screen=booking&tab=team etc.
+const DEEP_LINK_SCREEN = new URLSearchParams(window.location.search).get('screen')
+const DEEP_LINK_TAB    = new URLSearchParams(window.location.search).get('tab')
+
 export default function App() {
   const { session, screen, refreshCache, setScreen, setActiveModules, setScanEquipmentId, setSession, setSharedWorkspaces } = useAppStore()
   const [loading, setLoading] = useState(true)
@@ -76,8 +80,16 @@ export default function App() {
   useEffect(() => {
     if (session?.loginMode) {
       localStorage.setItem('ilab_login_mode', session.loginMode)
-      // After login, if there's a pending QR scan redirect to the equipment scan screen
-      if (SCAN_EQ_ID) setScreen('equipmentscan')
+      // QR scan takes priority
+      if (SCAN_EQ_ID) { setScreen('equipmentscan'); return }
+      // Deep-link from email notification
+      if (DEEP_LINK_SCREEN) {
+        if (DEEP_LINK_TAB === 'team') {
+          const { setPendingProfileTab } = useAppStore.getState()
+          setPendingProfileTab('team')
+        }
+        setScreen(DEEP_LINK_SCREEN)
+      }
     } else if (!session) {
       localStorage.removeItem('ilab_login_mode')
       setShowIconPicker(null)
