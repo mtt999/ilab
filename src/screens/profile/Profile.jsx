@@ -926,12 +926,6 @@ function StaffListPanel({ toast, session }) {
                   {s.email && <span>📧 {s.email}</span>}
                   {s.password && <span style={{ fontSize: 11, color: 'var(--text3)' }}>🔑 ••••••••</span>}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
-                  <span style={{ fontSize: 11, color: 'var(--text3)' }}>Change role:</span>
-                  {[{ label: 'Lab Manager', role: 'user' }, { label: 'Lab User', role: 'student' }].map(opt => (
-                    <button key={opt.role} className={`btn btn-sm${s.role === opt.role ? ' btn-primary' : ''}`} style={{ fontSize: 11, padding: '2px 10px' }} onClick={() => setMemberRole(s, opt.role)}>{opt.label}</button>
-                  ))}
-                </div>
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button className="btn btn-sm" onClick={() => { setEditStaff(s); setShowModal(true) }}>Edit</button>
@@ -942,12 +936,12 @@ function StaffListPanel({ toast, session }) {
           </div>
         ))
       }
-      {showModal && <StaffModal staff={editStaff} onClose={() => { setShowModal(false); setEditStaff(null) }} onSave={saveStaff} />}
+      {showModal && <StaffModal staff={editStaff} onClose={() => { setShowModal(false); setEditStaff(null) }} onSave={saveStaff} onRoleChange={setMemberRole} />}
     </div>
   )
 }
 
-function StaffModal({ staff, onClose, onSave }) {
+function StaffModal({ staff, onClose, onSave, onRoleChange }) {
   const [form, setForm] = useState(staff ? { name: staff.name||'', password: '', email: staff.email||'', phone: staff.phone||'' } : { name: '', password: '', email: '', phone: '' })
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.35)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
@@ -961,6 +955,20 @@ function StaffModal({ staff, onClose, onSave }) {
           <div className="field"><label>Password{staff ? ' (leave blank to keep)' : ' *'}</label><input type="text" value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} placeholder={staff ? 'Type to change' : 'Min. 6 chars'} /></div>
           <div className="field"><label>Phone</label><input value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} /></div>
         </div>
+        {staff && onRoleChange && (
+          <div className="field">
+            <label>Role</label>
+            <div style={{ display:'flex', gap:8 }}>
+              {[{ label: 'Lab Manager', role: 'user' }, { label: 'Lab User', role: 'student' }].map(opt => (
+                <button key={opt.role}
+                  className={`btn btn-sm${staff.role === opt.role ? ' btn-primary' : ''}`}
+                  onClick={() => { onRoleChange(staff, opt.role); onClose() }}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div style={{ display:'flex', gap:10, marginTop:8 }}>
           <button className="btn btn-primary" onClick={()=>onSave(form, staff?.id)}>Save</button>
           <button className="btn" onClick={onClose}>Cancel</button>
