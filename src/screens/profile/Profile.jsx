@@ -471,8 +471,16 @@ function NotificationPrefsPanel({ userId, role }) {
 
   async function save() {
     setSaving(true)
-    await sb.from('notification_prefs').upsert({ ...prefs, user_id: userId })
-    toast('Notification preferences saved ✓')
+    const { error } = await sb.from('notification_prefs').upsert(
+      { ...prefs, user_id: userId },
+      { onConflict: 'user_id' }
+    )
+    if (error) {
+      toast('Error saving preferences: ' + error.message)
+      console.error('notification_prefs upsert error:', error)
+    } else {
+      toast('Notification preferences saved ✓')
+    }
     setSaving(false)
   }
 
