@@ -781,8 +781,8 @@ const PALETTE = ['#0d47a1','#c84b2f','#2a6049','#7c4dbd','#b45309','#0369a1','#b
 function PointChart({ results, isOutlier }) {
   if (!results.length) return null
 
-  const W = 560, H = 200
-  const pad = { t: 24, r: 20, b: 52, l: 50 }
+  const W = 560, H = 220
+  const pad = { t: 28, r: 20, b: 52, l: 50 }
   const cW = W - pad.l - pad.r
   const cH = H - pad.t - pad.b
 
@@ -790,31 +790,30 @@ function PointChart({ results, isOutlier }) {
   const specimens   = [...new Set(results.map(getSpecimen))]
   const xOf = sp => pad.l + (specimens.length <= 1 ? cW / 2 : (specimens.indexOf(sp) / (specimens.length - 1)) * cW)
 
-  // numeric values for Y scale
   const NUMERIC_TYPES = ['number','percentage','temperature','ratio']
   const numericVals = results.filter(r => NUMERIC_TYPES.includes(r.result_type)).map(r => parseFloat(r.result_value)).filter(v => !isNaN(v))
 
-  // per-specimen stddev stats
+  // per-specimen stats: mean, std, min, max
   const specimenStats = {}
   specimens.forEach(sp => {
     const spVals = results
       .filter(r => getSpecimen(r) === sp && NUMERIC_TYPES.includes(r.result_type))
       .map(r => parseFloat(r.result_value)).filter(v => !isNaN(v))
-    if (spVals.length >= 2) {
+    if (spVals.length >= 1) {
       const mean = spVals.reduce((a, b) => a + b, 0) / spVals.length
-      const std  = Math.sqrt(spVals.reduce((s, v) => s + (v - mean) ** 2, 0) / spVals.length)
-      specimenStats[sp] = { mean, std }
+      const std  = spVals.length >= 2 ? Math.sqrt(spVals.reduce((s, v) => s + (v - mean) ** 2, 0) / spVals.length) : 0
+      specimenStats[sp] = { mean, std, min: Math.min(...spVals), max: Math.max(...spVals), count: spVals.length }
     }
   })
 
-  // Y range — extend to fit error bars
+  // Y range — extend to fit error bars and min/max
   const allY = [
     ...numericVals,
-    ...Object.values(specimenStats).flatMap(s => [s.mean + s.std, s.mean - s.std]),
+    ...Object.values(specimenStats).flatMap(s => [s.mean + s.std, s.mean - s.std, s.min, s.max]),
   ]
   const rawMin = allY.length ? Math.min(...allY) : 0
   const rawMax = allY.length ? Math.max(...allY) : 1
-  const padY   = (rawMax - rawMin) * 0.12 || 0.5
+  const padY   = (rawMax - rawMin) * 0.15 || 0.5
   const yMin   = rawMin - padY
   const yMax   = rawMax + padY
   const toY = v => pad.t + ((yMax - v) / (yMax - yMin)) * cH
@@ -825,7 +824,36 @@ function PointChart({ results, isOutlier }) {
   const testNames = [...new Set(results.map(r => r.test_name || r.sample_name || 'Result'))]
   const colorOf   = n => PALETTE[testNames.indexOf(n) % PALETTE.length]
 
-  const hasStdDev  = Object.keys(specimenStats).length > 0
+  // Linear regression trend line + R²
+  const trendData = results
+    .filter(r => NUMERIC_TYPES.includes(r.result_type))
+    .map(r => { const xi = specimens.indexOf(getSpecimen(r)); const yi = parseFloat(r.result_value); return (!isNaN(yi) && xi >= 0) ? { xi, yi } : null })
+    .filter(Boolean)
+
+  let trendLine = null, r2 = null
+  if (trendData.length >= 2 && specimens.length >= 2) {
+    const n = trendData.length
+    const sumX  = trendData.reduce((a, p) => a + p.xi, 0)
+    const sumY  = trendData.reduce((a, p) => a + p.yi, 0)
+    const sumXY = trendData.reduce((a, p) => a + p.xi * p.yi, 0)
+    const sumX2 = trendData.reduce((a, p) => a + p.xi * p.xi, 0)
+    const denom = n * sumX2 - sumX * sumX
+    if (Math.abs(denom) > 1e-10) {
+      const m    = (n * sumXY - sumX * sumY) / denom
+      const b    = (sumY - m * sumX) / n
+      const yBar = sumY / n
+      const ssTot = trendData.reduce((a, p) => a + (p.yi - yBar) ** 2, 0)
+      const ssRes = trendData.reduce((a, p) => a + (p.yi - (m * p.xi + b)) ** 2, 0)
+      r2 = ssTot > 1e-10 ? Math.max(0, Math.min(1, 1 - ssRes / ssTot)) : 1
+      trendLine = {
+        x1: xOf(specimens[0]), y1: toY(m * 0 + b),
+        x2: xOf(specimens[specimens.length - 1]), y2: toY(m * (specimens.length - 1) + b),
+      }
+    }
+  }
+
+  const hasStdDev   = Object.values(specimenStats).some(s => s.std > 0)
+  const hasMinMax   = Object.values(specimenStats).some(s => s.max > s.min)
   const hasPassFail = results.some(r => r.result_type === 'pass_fail')
 
   return (
@@ -845,19 +873,50 @@ function PointChart({ results, isOutlier }) {
         <line x1={pad.l} y1={pad.t} x2={pad.l} y2={H - pad.b} stroke="var(--text3)" strokeWidth={1} />
         <line x1={pad.l} y1={H - pad.b} x2={W - pad.r} y2={H - pad.b} stroke="var(--text3)" strokeWidth={1} />
 
-        {/* Std-dev error bars (drawn before points so points sit on top) */}
+        {/* Trend line */}
+        {trendLine && (
+          <line x1={trendLine.x1} y1={trendLine.y1} x2={trendLine.x2} y2={trendLine.y2}
+            stroke="#b45309" strokeWidth={1.8} strokeDasharray="6 3" strokeOpacity={0.85}>
+            <title>Trend line (linear regression)</title>
+          </line>
+        )}
+
+        {/* R² label inside chart — top right */}
+        {r2 !== null && (
+          <text x={W - pad.r - 2} y={pad.t - 6} textAnchor="end" fontSize={10} fill="#b45309" fontWeight="600">
+            R² = {r2.toFixed(3)}
+          </text>
+        )}
+
+        {/* Per-specimen: min/max range + std-dev bars + mean tick */}
         {Object.entries(specimenStats).map(([sp, s]) => {
           const x     = xOf(sp)
           const yMean = toY(s.mean)
           const yHi   = toY(s.mean + s.std)
           const yLo   = toY(s.mean - s.std)
+          const yMax  = toY(s.max)
+          const yMin_ = toY(s.min)
           return (
             <g key={sp}>
-              <line x1={x} y1={yHi} x2={x} y2={yLo} stroke="#0d47a1" strokeWidth={2.5} strokeOpacity={0.35} />
-              <line x1={x - 6} y1={yHi} x2={x + 6} y2={yHi} stroke="#0d47a1" strokeWidth={1.5} strokeOpacity={0.5} />
-              <line x1={x - 6} y1={yLo} x2={x + 6} y2={yLo} stroke="#0d47a1" strokeWidth={1.5} strokeOpacity={0.5} />
-              <line x1={x - 8} y1={yMean} x2={x + 8} y2={yMean} stroke="#0d47a1" strokeWidth={2.5} strokeOpacity={0.75}>
-                <title>{sp} mean={s.mean.toFixed(3)}, σ={s.std.toFixed(3)}</title>
+              {/* Min/Max outer range (thin dashed) */}
+              {s.max > s.min && (
+                <>
+                  <line x1={x} y1={yMax} x2={x} y2={yMin_} stroke="#0d47a1" strokeWidth={1} strokeOpacity={0.18} strokeDasharray="2 2" />
+                  <line x1={x - 9} y1={yMax} x2={x + 9} y2={yMax} stroke="#0d47a1" strokeWidth={1.5} strokeOpacity={0.45} />
+                  <line x1={x - 9} y1={yMin_} x2={x + 9} y2={yMin_} stroke="#0d47a1" strokeWidth={1.5} strokeOpacity={0.45} />
+                </>
+              )}
+              {/* Std-dev bar */}
+              {s.std > 0 && (
+                <>
+                  <line x1={x} y1={yHi} x2={x} y2={yLo} stroke="#0d47a1" strokeWidth={2.5} strokeOpacity={0.38} />
+                  <line x1={x - 6} y1={yHi} x2={x + 6} y2={yHi} stroke="#0d47a1" strokeWidth={1.5} strokeOpacity={0.6} />
+                  <line x1={x - 6} y1={yLo} x2={x + 6} y2={yLo} stroke="#0d47a1" strokeWidth={1.5} strokeOpacity={0.6} />
+                </>
+              )}
+              {/* Mean tick */}
+              <line x1={x - 8} y1={yMean} x2={x + 8} y2={yMean} stroke="#0d47a1" strokeWidth={2.5} strokeOpacity={0.8}>
+                <title>{sp}: mean={s.mean.toFixed(3)}, σ={s.std.toFixed(3)}, min={s.min.toFixed(3)}, max={s.max.toFixed(3)}</title>
               </line>
             </g>
           )
@@ -918,12 +977,30 @@ function PointChart({ results, isOutlier }) {
         {hasStdDev && (
           <span style={{ fontSize: 11, color: '#0d47a1', display: 'flex', alignItems: 'center', gap: 5 }}>
             <svg width={14} height={14} style={{ flexShrink: 0 }}>
-              <line x1={7} y1={1} x2={7} y2={13} stroke="#0d47a1" strokeWidth={2} strokeOpacity={0.5} />
-              <line x1={3} y1={1} x2={11} y2={1} stroke="#0d47a1" strokeWidth={1.5} strokeOpacity={0.5} />
-              <line x1={3} y1={13} x2={11} y2={13} stroke="#0d47a1" strokeWidth={1.5} strokeOpacity={0.5} />
+              <line x1={7} y1={2} x2={7} y2={12} stroke="#0d47a1" strokeWidth={2} strokeOpacity={0.45} />
+              <line x1={3} y1={2} x2={11} y2={2} stroke="#0d47a1" strokeWidth={1.5} strokeOpacity={0.6} />
+              <line x1={3} y1={12} x2={11} y2={12} stroke="#0d47a1" strokeWidth={1.5} strokeOpacity={0.6} />
               <line x1={2} y1={7} x2={12} y2={7} stroke="#0d47a1" strokeWidth={2.5} strokeOpacity={0.8} />
             </svg>
-            Std dev (≥2 results)
+            Std dev · mean
+          </span>
+        )}
+        {hasMinMax && (
+          <span style={{ fontSize: 11, color: '#0d47a1', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <svg width={14} height={14} style={{ flexShrink: 0 }}>
+              <line x1={7} y1={1} x2={7} y2={13} stroke="#0d47a1" strokeWidth={1} strokeOpacity={0.3} strokeDasharray="2 2" />
+              <line x1={2} y1={1} x2={12} y2={1} stroke="#0d47a1" strokeWidth={1.5} strokeOpacity={0.5} />
+              <line x1={2} y1={13} x2={12} y2={13} stroke="#0d47a1" strokeWidth={1.5} strokeOpacity={0.5} />
+            </svg>
+            Min / Max
+          </span>
+        )}
+        {trendLine && (
+          <span style={{ fontSize: 11, color: '#b45309', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <svg width={20} height={14} style={{ flexShrink: 0 }}>
+              <line x1={1} y1={12} x2={19} y2={2} stroke="#b45309" strokeWidth={1.8} strokeDasharray="5 3" strokeOpacity={0.85} />
+            </svg>
+            Trend line{r2 !== null ? ` (R²=${r2.toFixed(3)})` : ''}
           </span>
         )}
       </div>
