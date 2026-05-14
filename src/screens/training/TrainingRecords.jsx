@@ -911,7 +911,8 @@ export default function TrainingRecords() {
   async function loadStudents() {
     setLoading(true)
     if (session?.loginMode === 'solo') {
-      setStudents([])
+      // Solo user sees only their own row
+      setStudents([{ id: session.userId, name: session.username, email: session.username }])
       setLoading(false)
       return
     }
@@ -926,7 +927,7 @@ export default function TrainingRecords() {
   }
 
   async function checkExpiry() {
-    if (session?.loginMode === 'solo') return
+    if (!session?.userId) return
     const { data } = await sb.from('training_equipment')
       .select('*, equipment_inventory(equipment_name, nickname), users(name, last_name)')
       .lt('expires_at', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
