@@ -79,14 +79,14 @@ function ModuleCard({ m, onClick, imgUrl, isAdminManage }) {
       onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.12)' }}
       onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}>
       <div style={{ position: 'absolute', inset: 0, background: m.bg, pointerEvents: 'none' }} />
-      {imgUrl && !imgErr && <img src={imgUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} onError={() => setImgErr(true)} />}
-      <div style={{ position: 'absolute', inset: 0, background: hasImg ? 'linear-gradient(to top, rgba(0,0,0,0.72) 40%, rgba(0,0,0,0.1) 100%)' : 'linear-gradient(to top, rgba(0,0,0,0.15) 0%, transparent 100%)', pointerEvents: 'none' }} />
+      {imgUrl && !imgErr && <img src={imgUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', padding: 16, pointerEvents: 'none' }} onError={() => setImgErr(true)} />}
+      <div style={{ position: 'absolute', inset: 0, background: hasImg ? 'linear-gradient(to top, rgba(0,0,0,0.85) 35%, rgba(0,0,0,0.15) 100%)' : 'linear-gradient(to top, rgba(0,0,0,0.15) 0%, transparent 100%)', pointerEvents: 'none' }} />
       {m.external && <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: 10, borderRadius: 4, padding: '2px 6px', pointerEvents: 'none' }}>↗ External</div>}
       {isAdminManage && <div style={{ position: 'absolute', top: 10, right: 10, background: m.color, color: '#fff', fontSize: 10, borderRadius: 4, padding: '2px 8px', fontWeight: 600, pointerEvents: 'none' }}>⚙ Edit</div>}
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 14px', pointerEvents: 'none' }}>
         {!hasImg && <div style={{ fontSize: 28, marginBottom: 6 }}>{m.icon}</div>}
-        <div style={{ fontWeight: 700, fontSize: 14, color: hasImg ? '#fff' : m.color, textShadow: hasImg ? '0 1px 3px rgba(0,0,0,0.5)' : 'none', marginBottom: 2 }}>{m.label}</div>
-        <div style={{ fontSize: 11, color: hasImg ? 'rgba(255,255,255,0.82)' : m.color, opacity: hasImg ? 1 : 0.75 }}>{isAdminManage ? 'Click to manage link' : m.sub}</div>
+        <div style={{ fontWeight: 700, fontSize: 14, color: hasImg ? '#fff' : m.color, textShadow: hasImg ? '0 2px 6px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.8)' : 'none', marginBottom: 2 }}>{m.label}</div>
+        <div style={{ fontSize: 11, color: hasImg ? 'rgba(255,255,255,0.9)' : m.color, opacity: hasImg ? 1 : 0.75, textShadow: hasImg ? '0 1px 4px rgba(0,0,0,0.8)' : 'none' }}>{isAdminManage ? 'Click to manage link' : m.sub}</div>
       </div>
     </div>
   )
