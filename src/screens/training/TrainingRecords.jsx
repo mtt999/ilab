@@ -1021,11 +1021,11 @@ function StudentLocker({ session }) {
       if (exists) return prev.map(l => l.locker_number === lockerNumber ? { ...l, is_unavailable: nowUnavailable } : l)
       return [...prev, { locker_number: lockerNumber, is_unavailable: nowUnavailable, user_id: null, user_name: null }]
     })
-    const { error } = await sb.from('student_lockers').upsert({
-      locker_number: lockerNumber,
-      is_unavailable: nowUnavailable,
-      user_id: null, user_name: null,
-    }, { onConflict: 'locker_number' })
+    // Use update if row exists, insert if not — avoids needing a unique constraint
+    const { data: existing } = await sb.from('student_lockers').select('locker_number').eq('locker_number', lockerNumber).maybeSingle()
+    const { error } = existing
+      ? await sb.from('student_lockers').update({ is_unavailable: nowUnavailable }).eq('locker_number', lockerNumber)
+      : await sb.from('student_lockers').insert({ locker_number: lockerNumber, is_unavailable: nowUnavailable })
     if (error) { toast('Error: ' + error.message); load() }
   }
 
