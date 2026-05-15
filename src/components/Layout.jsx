@@ -122,7 +122,7 @@ export default function Layout({ children }) {
           background: '#fff',
           borderTop: '1px solid #e0e0e0',
           boxShadow: '0 -2px 12px rgba(0,0,0,0.07)',
-          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)',
+          paddingBottom: 'max(calc(env(safe-area-inset-bottom, 0px) / 2), 4px)',
         }}>
           <div style={{ display: 'flex', height: 56 }}>
           {NAV_TABS.map(tab => {

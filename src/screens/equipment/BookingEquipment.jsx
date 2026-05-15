@@ -1,4 +1,5 @@
 import HelpPanel from '../../components/HelpPanel'
+import ScrollTabs from '../../components/ScrollTabs'
 import React from 'react'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { sb } from '../../lib/supabase'
@@ -1430,14 +1431,14 @@ export default function BookingEquipment() {
         <div className="section-title">Booking Equipment</div>
         <HelpPanel screen="booking" />
       </div>
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 24, overflowX: 'auto' }}>
+      <ScrollTabs style={{ borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
         {tabs.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             style={{ padding: '10px 20px', border: 'none', background: 'transparent', fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 500, cursor: 'pointer', color: tab === t.key ? 'var(--accent)' : 'var(--text2)', borderBottom: `2px solid ${tab === t.key ? 'var(--accent)' : 'transparent'}`, whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
             {t.label}
           </button>
         ))}
-      </div>
+      </ScrollTabs>
       {tab === 'calendar' && <BookingCalendar session={session} />}
       {tab === 'history' && <BookingHistory session={session} />}
       {tab === 'settings' && <BookingSettings session={session} />}

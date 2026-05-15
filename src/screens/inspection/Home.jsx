@@ -1,4 +1,5 @@
 import HelpPanel from '../../components/HelpPanel'
+import ScrollTabs from '../../components/ScrollTabs'
 import { useState, useEffect, useRef } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 import { sb } from '../../lib/supabase'
@@ -844,14 +845,14 @@ export default function Home() {
         </div>
       )}
 
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 24, overflowX: 'auto' }}>
+      <ScrollTabs style={{ borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
         {subTabs.map(t => (
           <button key={t.key} onClick={() => setSubTab(t.key)}
             style={{ padding: '10px 18px', border: 'none', background: 'transparent', fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 500, cursor: 'pointer', color: subTab === t.key ? 'var(--accent)' : 'var(--text2)', borderBottom: `2px solid ${subTab === t.key ? 'var(--accent)' : 'transparent'}`, whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
             {t.label}
           </button>
         ))}
-      </div>
+      </ScrollTabs>
 
       {subTab === 'inspect' && (
         <div>

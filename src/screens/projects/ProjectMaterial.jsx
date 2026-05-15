@@ -1,4 +1,5 @@
 import HelpPanel from '../../components/HelpPanel'
+import ScrollTabs from '../../components/ScrollTabs'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { sb } from '../../lib/supabase'
 import { useAppStore } from '../../store/useAppStore'
@@ -1603,14 +1604,14 @@ function WorkspaceTab({ session, projects, isSolo, readOnly, allowedNames, userP
 
   return (
     <div>
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
+      <ScrollTabs style={{ borderBottom: '1px solid var(--border)', marginBottom: 20 }}>
         {wsTabs.map(t => (
           <button key={t.key} onClick={() => setWsTab(t.key)}
             style={{ padding: '10px 20px', border: 'none', background: 'transparent', fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 500, cursor: 'pointer', color: wsTab === t.key ? 'var(--accent)' : 'var(--text2)', borderBottom: `2px solid ${wsTab === t.key ? 'var(--accent)' : 'transparent'}`, whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
             {t.label}
           </button>
         ))}
-      </div>
+      </ScrollTabs>
 
       {wsTab === 'members' && (
         isSolo
@@ -1784,14 +1785,14 @@ function MaterialInventoryTab({ session, isSolo }) {
                   )}
                 </div>
               </div>
-              <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 0, background: 'var(--surface)', overflowX: 'auto' }}>
+              <ScrollTabs style={{ borderBottom: '1px solid var(--border)' }} bg='var(--surface)'>
                 {subTabs.map(t => (
                   <button key={t.key} onClick={() => setSubTab(t.key)}
                     style={{ padding: '11px 16px', border: 'none', background: 'transparent', fontFamily: 'var(--sans)', fontSize: 13, fontWeight: 500, cursor: 'pointer', color: subTab === t.key ? 'var(--accent3)' : 'var(--text2)', borderBottom: `2px solid ${subTab === t.key ? 'var(--accent3)' : 'transparent'}`, whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
                     {t.label}
                   </button>
                 ))}
-              </div>
+              </ScrollTabs>
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 var(--radius-lg) var(--radius-lg)', padding: 24 }}>
                 {subTab === 'info'      && <ProjectInfo project={activeProject} users={users} onSaved={loadActiveProject} isSolo={isSolo} readOnly={viewingShared} />}
                 {subTab === 'materials' && <ProjectMaterials project={activeProject} />}
@@ -1920,14 +1921,14 @@ export default function ProjectMaterial() {
       </div>
 
       {/* Main tabs */}
-      <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
+      <ScrollTabs style={{ borderBottom: '2px solid var(--border)', marginBottom: 20 }}>
         {mainTabs.map(t => (
           <button key={t.key} onClick={() => setMainTab(t.key)}
             style={{ padding: '12px 22px', border: 'none', background: 'transparent', fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 600, cursor: 'pointer', color: mainTab === t.key ? accentColor : 'var(--text2)', borderBottom: `3px solid ${mainTab === t.key ? accentColor : 'transparent'}`, marginBottom: -2, whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
             {t.label}
           </button>
         ))}
-      </div>
+      </ScrollTabs>
 
       {mainTab === 'inventory' && (
         <MaterialInventoryTab session={session} isSolo={isSolo} />

@@ -1,4 +1,5 @@
 import HelpPanel from '../../components/HelpPanel'
+import ScrollTabs from '../../components/ScrollTabs'
 import React from 'react'
 import { TrainingRequestsPanel, UserTrainingSchedule, ExamTab } from './TrainingSchedule'
 import { useState, useEffect, useRef } from 'react'
@@ -1271,14 +1272,14 @@ export default function TrainingRecords() {
         </div>
       )}
 
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
+      <ScrollTabs style={{ borderBottom: '1px solid var(--border)', marginBottom: 20 }}>
         {subTabs.map(t => (
           <button key={t.key} onClick={() => setSubTab(t.key)}
             style={{ padding: '10px 16px', border: 'none', background: 'transparent', fontFamily: 'var(--sans)', fontSize: 13, fontWeight: 500, cursor: 'pointer', color: subTab === t.key ? 'var(--accent)' : 'var(--text2)', borderBottom: `2px solid ${subTab === t.key ? 'var(--accent)' : 'transparent'}`, whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
             {t.label}
           </button>
         ))}
-      </div>
+      </ScrollTabs>
 
       {subTab === 'requests' && <TrainingRequestsPanel session={session} />}
       {subTab === 'exam'     && <ExamTab session={session} />}
