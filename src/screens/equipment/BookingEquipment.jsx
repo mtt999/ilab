@@ -955,11 +955,11 @@ function BookingCalendar({ session }) {
 
   const isMobile = useIsMobile()
   return (
-    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 16, alignItems: 'flex-start' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
 
       {/* Back to equipment scan — only shown when arriving via QR scan */}
       {fromQRScan && (
-        <div style={{ width: '100%', marginBottom: 4 }}>
+        <div style={{ width: '100%', marginBottom: 8 }}>
           <button
             onClick={() => setScreen('equipmentscan')}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, border: '1.5px solid #b2dfcb', background: '#e8f2ee', fontSize: 13, fontWeight: 700, color: '#2a6049', cursor: 'pointer' }}
@@ -968,6 +968,20 @@ function BookingCalendar({ session }) {
           </button>
         </div>
       )}
+
+      {/* ── Notifications — always at top ── */}
+      {notifications.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          {notifications.map(n => (
+            <div key={n.id} style={{ background: n.type === 'denied' ? '#fcebeb' : '#e8f2ee', border: `1px solid ${n.type === 'denied' ? '#f09595' : '#9FE1CB'}`, borderRadius: 8, padding: '10px 14px', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, fontSize: 13 }}>
+              <span style={{ color: n.type === 'denied' ? '#a32d2d' : '#1e4d39' }}>{n.type === 'denied' ? '✕' : '✓'} {n.message}</span>
+              <button onClick={() => dismissNotification(n.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 14, flexShrink: 0 }}>✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 16, alignItems: 'flex-start' }}>
 
       {/* ── Left: equipment selector ── */}
       <div style={{ width: isMobile ? '100%' : 220, flexShrink: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
@@ -1009,14 +1023,6 @@ function BookingCalendar({ session }) {
 
       {/* ── Right: calendar ── */}
       <div style={{ flex: 1, minWidth: 0, width: isMobile ? '100%' : 'auto' }}>
-
-        {/* Notifications */}
-        {notifications.map(n => (
-          <div key={n.id} style={{ background: n.type === 'denied' ? '#fcebeb' : '#e8f2ee', border: `1px solid ${n.type === 'denied' ? '#f09595' : '#9FE1CB'}`, borderRadius: 8, padding: '10px 14px', marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
-            <span style={{ color: n.type === 'denied' ? '#a32d2d' : '#1e4d39' }}>{n.type === 'denied' ? '✕' : '✓'} {n.message}</span>
-            <button onClick={() => dismissNotification(n.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 14 }}>✕</button>
-          </div>
-        ))}
 
         {/* Calendar toolbar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
@@ -1107,6 +1113,7 @@ function BookingCalendar({ session }) {
         />
       )}
     </div>
+  </div>
   )
 }
 
