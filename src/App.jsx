@@ -26,6 +26,7 @@ import BarcodeScannerScreen from './screens/barcode/BarcodeScannerScreen'
 import BarcodeManager from './screens/barcode/BarcodeManager'
 import EquipmentScan from './screens/equipment/EquipmentScan'
 import Admin from './screens/admin/Admin'
+import { isNative } from './lib/scanner.js'
 
 // Detect if we're on the /admin route
 const IS_ADMIN_ROUTE = window.location.pathname.endsWith('/admin') || window.location.pathname.endsWith('/admin/')
@@ -46,6 +47,26 @@ export default function App() {
   // Store the equipment ID from the QR code URL param so Login can redirect after auth
   useEffect(() => {
     if (SCAN_EQ_ID) setScanEquipmentId(SCAN_EQ_ID)
+  }, [])
+
+  // Native deep-link: ilab://?eq=<uuid> — fired when iOS opens the app via QR code URL scheme
+  useEffect(() => {
+    if (!isNative()) return
+    let listenerHandle
+    import('@capacitor/app').then(({ App: CapApp }) => {
+      CapApp.addListener('appUrlOpen', ({ url }) => {
+        let eq = null
+        try {
+          eq = new URL(url).searchParams.get('eq')
+        } catch {
+          eq = new URLSearchParams((url.split('?')[1]) || '').get('eq')
+        }
+        if (!eq) return
+        setScanEquipmentId(eq)
+        if (useAppStore.getState().session) setScreen('equipmentscan')
+      }).then(h => { listenerHandle = h })
+    })
+    return () => { listenerHandle?.remove() }
   }, [])
 
   useEffect(() => {

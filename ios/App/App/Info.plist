@@ -47,5 +47,16 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>iLab uses the camera to scan barcodes and QR codes on lab materials and equipment.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>ilab</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

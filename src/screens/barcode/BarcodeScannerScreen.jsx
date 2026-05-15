@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { sb } from '../../lib/supabase'
 import { useAppStore } from '../../store/useAppStore'
+import { isNative, scanBarcode } from '../../lib/scanner.js'
 
 const TYPE_LABELS = { aggregate: 'Aggregate', asphalt_binder: 'Asphalt Binder', plant_mix: 'Plant Mix', cores: 'Cores', other: 'Other' }
 const typeLabel = t => TYPE_LABELS[t] || t || '—'
@@ -84,11 +85,25 @@ function ScanTab() {
   const [result, setResult] = useState(null)
   const [looking, setLooking] = useState(false)
   const [detectorSupported, setDetectorSupported] = useState(true)
+  const [nativeScanning, setNativeScanning] = useState(false)
 
   useEffect(() => {
+    if (isNative()) return  // native app: don't auto-start web camera
     startCamera()
     return () => stopCamera()
   }, [])
+
+  async function handleNativeScan() {
+    setNativeScanning(true)
+    try {
+      const value = await scanBarcode()
+      lookupBarcode(value)
+    } catch (e) {
+      if (e.message !== 'No barcode detected.') setCameraError(e.message)
+    } finally {
+      setNativeScanning(false)
+    }
+  }
 
   async function startCamera() {
     setCameraError('')
@@ -160,7 +175,22 @@ function ScanTab() {
 
   return (
     <div>
-      {!result && (
+      {/* Native app: show a full-width scan button instead of the web camera UI */}
+      {isNative() && !result && (
+        <div className="card" style={{ padding: '28px 24px', textAlign: 'center', marginBottom: 16 }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>📷</div>
+          <button
+            onClick={handleNativeScan}
+            disabled={nativeScanning}
+            className="btn btn-primary"
+            style={{ width: '100%', fontSize: 16, padding: '14px 0', marginBottom: 8 }}
+          >
+            {nativeScanning ? 'Opening scanner…' : 'Scan Barcode / QR Code'}
+          </button>
+          {cameraError && <div style={{ fontSize: 13, color: 'var(--accent2)', marginTop: 8 }}>{cameraError}</div>}
+        </div>
+      )}
+      {!isNative() && !result && (
         <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 16 }}>
           {cameraError ? (
             <div style={{ padding: '32px 24px', textAlign: 'center' }}>
