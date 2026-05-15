@@ -334,12 +334,40 @@ export default function Dashboard() {
         return
       }
       if (isSolo) {
-        const { data } = await sb.from('solo_users').select('active_modules').eq('id', session.userId).maybeSingle()
-        setActiveModules(data?.active_modules?.length ? data.active_modules : null)
+        const [soloRes, settingsRes] = await Promise.all([
+          sb.from('solo_users').select('active_modules').eq('id', session.userId).maybeSingle(),
+          sb.from('settings').select('value').eq('key', 'solo_allowed_modules').maybeSingle(),
+        ])
+        let mods = soloRes.data?.active_modules
+        try {
+          const soloPool = settingsRes?.data?.value ? JSON.parse(settingsRes.data.value) : null
+          if (soloPool !== null && mods?.length) {
+            mods = mods.filter(k => soloPool.includes(k) || k === 'profile')
+          }
+        } catch {}
+        setActiveModules(mods?.length ? mods : null)
       } else {
-        const { data } = await sb.from('user_dashboard_prefs').select('active_modules, allowed_modules').eq('user_id', session.userId).order('created_at', { ascending: false }).limit(1)
-        const row = data?.[0]
-        setActiveModules(row?.active_modules?.length ? row.active_modules : null)
+        const [prefsRes, orgRes, appRes] = await Promise.all([
+          sb.from('user_dashboard_prefs').select('active_modules, allowed_modules').eq('user_id', session.userId).order('created_at', { ascending: false }).limit(1),
+          session?.organizationId
+            ? sb.from('organizations').select('allowed_modules').eq('id', session.organizationId).maybeSingle()
+            : Promise.resolve(null),
+          sb.from('settings').select('value').eq('key', 'app_allowed_modules').maybeSingle(),
+        ])
+        const row = prefsRes.data?.[0]
+        let mods = row?.active_modules
+        try {
+          let appPool = null
+          try { appPool = appRes?.data?.value ? JSON.parse(appRes.data.value) : null } catch {}
+          const orgPool = orgRes?.data?.allowed_modules || null
+          const effectivePool = appPool !== null && orgPool !== null
+            ? orgPool.filter(k => appPool.includes(k))
+            : (appPool ?? orgPool)
+          if (effectivePool !== null && mods?.length) {
+            mods = mods.filter(k => effectivePool.includes(k) || k === 'profile')
+          }
+        } catch {}
+        setActiveModules(mods?.length ? mods : null)
         if (session?.role === 'student') {
           setStudentAllowedPool(new Set(row?.allowed_modules || []))
         }
