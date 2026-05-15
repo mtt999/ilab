@@ -119,23 +119,37 @@ export default function DashboardIconPicker({ session, loginMode, onDone }) {
         if (session?.role === 'user' || session?.role === 'student') {
           queries.push(sb.from('user_screen_access').select('screen_key').eq('user_id', session.userId))
         }
-        // Always fetch org-level allowed modules (set by super admin)
+        // Always fetch org-level allowed modules and global app pool in parallel
         queries.push(
           session?.organizationId
             ? sb.from('organizations').select('allowed_modules').eq('id', session.organizationId).maybeSingle()
             : Promise.resolve(null)
         )
+        queries.push(
+          sb.from('settings').select('value').eq('key', 'app_allowed_modules').maybeSingle()
+        )
         const results = await Promise.all(queries)
         const prefsRes = results[0]
         const accessRes = (session?.role === 'user' || session?.role === 'student') ? results[1] : null
-        const orgRes = results[results.length - 1]
+        const orgRes = results[results.length - 2]
+        const appRes = results[results.length - 1]
 
         savedModules = prefsRes.data?.[0]?.active_modules
 
-        // Apply org-level pool: super admin defines which icons this org can use
+        // Global app pool (super admin master list)
+        let appPool = null
+        try { appPool = appRes?.data?.value ? JSON.parse(appRes.data.value) : null } catch { appPool = null }
+
+        // Org-level pool (super admin per-org setting)
         const orgPool = orgRes?.data?.allowed_modules || null
-        if (orgPool !== null) {
-          localAvailable = localAvailable.filter(m => orgPool.includes(m.key) || m.key === 'profile')
+
+        // Combine: global pool first, then org pool further restricts
+        const effectivePool = appPool !== null && orgPool !== null
+          ? orgPool.filter(k => appPool.includes(k))
+          : (appPool ?? orgPool)
+
+        if (effectivePool !== null) {
+          localAvailable = localAvailable.filter(m => effectivePool.includes(m.key) || m.key === 'profile')
         }
 
         if (session?.role === 'student') {

@@ -289,6 +289,78 @@ function UserModal({ user, orgs, defaultOrgId, isSuperAdmin, defaultRole, onClos
 // ── Org modules modal (super admin only) ─────────────────────
 const ORG_CONFIGURABLE_MODULES = ALL_MODULES_META.filter(m => m.key !== 'profile')
 
+// ── App-level modules modal (super admin only) ────────────────
+function AppModulesModal({ onClose }) {
+  const { toast } = useAppStore()
+  const [selected, setSelected] = useState(null)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    sb.from('settings').select('value').eq('key', 'app_allowed_modules').maybeSingle()
+      .then(({ data }) => {
+        try {
+          const parsed = data?.value ? JSON.parse(data.value) : null
+          setSelected(parsed ? new Set(parsed) : new Set(ORG_CONFIGURABLE_MODULES.map(m => m.key)))
+        } catch {
+          setSelected(new Set(ORG_CONFIGURABLE_MODULES.map(m => m.key)))
+        }
+      })
+  }, [])
+
+  function toggle(key) {
+    setSelected(prev => { const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next })
+  }
+
+  async function save() {
+    setSaving(true)
+    const allKeys = ORG_CONFIGURABLE_MODULES.map(m => m.key)
+    const selectedKeys = allKeys.filter(k => selected.has(k))
+    const toSave = selectedKeys.length === allKeys.length ? null : selectedKeys
+    const value = toSave === null ? null : JSON.stringify(toSave)
+    if (value === null) {
+      await sb.from('settings').delete().eq('key', 'app_allowed_modules')
+    } else {
+      const { error } = await sb.from('settings').upsert({ key: 'app_allowed_modules', value }, { onConflict: 'key' })
+      if (error) { toast('Error saving: ' + error.message); setSaving(false); return }
+    }
+    toast('Global app icon access saved.')
+    onClose()
+  }
+
+  return (
+    <Modal onClose={onClose}>
+      <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>Dashboard Icons — Main App (Global)</div>
+      <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 20, lineHeight: 1.6 }}>
+        Select which icons are available across the entire app. Organizations can further restrict this list for their own users.
+      </div>
+      {selected === null ? <div className="spinner" style={{ margin: '20px auto' }} /> : (
+        <>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+            <button className="btn btn-sm" onClick={() => setSelected(new Set(ORG_CONFIGURABLE_MODULES.map(m => m.key)))}>Select all</button>
+            <button className="btn btn-sm" onClick={() => setSelected(new Set())}>Clear all</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20, maxHeight: '55vh', overflowY: 'auto' }}>
+            {ORG_CONFIGURABLE_MODULES.map(m => (
+              <label key={m.key} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '10px 14px', borderRadius: 8, border: `1.5px solid ${selected.has(m.key) ? 'var(--accent)' : 'var(--border)'}`, background: selected.has(m.key) ? 'var(--accent-light)' : 'var(--surface)' }}>
+                <input type="checkbox" checked={selected.has(m.key)} onChange={() => toggle(m.key)} style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
+                <span style={{ fontSize: 18, lineHeight: 1 }}>{m.icon}</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{m.label}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>{m.sub}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </>
+      )}
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button className="btn btn-primary" onClick={save} disabled={saving || selected === null}>{saving ? 'Saving…' : 'Save'}</button>
+        <button className="btn" onClick={onClose}>Cancel</button>
+      </div>
+    </Modal>
+  )
+}
+
 function OrgModulesModal({ org, onClose, onSaved }) {
   const { toast } = useAppStore()
   const [selected, setSelected] = useState(null)
@@ -479,10 +551,11 @@ export default function Admin() {
   const [orgFilter, setOrgFilter] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const [userModal, setUserModal]         = useState(null)
-  const [orgModal, setOrgModal]           = useState(null)
-  const [accessModal, setAccessModal]     = useState(null)
-  const [orgModulesModal, setOrgModulesModal] = useState(null)
+  const [userModal, setUserModal]               = useState(null)
+  const [orgModal, setOrgModal]                 = useState(null)
+  const [accessModal, setAccessModal]           = useState(null)
+  const [orgModulesModal, setOrgModulesModal]   = useState(null)
+  const [appModulesOpen, setAppModulesOpen]     = useState(false)
 
   // Super admin: images tab is accessed standalone (no tab bar), so exclude it from the tab list
   const tabs = isSuperAdmin
@@ -680,6 +753,22 @@ export default function Admin() {
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
             <button className="btn btn-primary btn-sm" onClick={() => setOrgModal('add')}>+ New organization</button>
           </div>
+
+          {/* Global app-level icon restriction */}
+          <div className="card" style={{ padding: '14px 18px', marginBottom: 16, border: '1.5px solid var(--accent)', background: 'var(--accent-light)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <button onClick={() => setAppModulesOpen(true)} style={{ fontWeight: 700, fontSize: 15, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', padding: 0, textAlign: 'left', textDecoration: 'underline dotted' }}>
+                  🌐 Main App (Global)
+                </button>
+                <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
+                  Global icon pool — applies to all organizations as the outermost boundary
+                </div>
+              </div>
+              <button className="btn btn-sm btn-primary" onClick={() => setAppModulesOpen(true)}>Icons</button>
+            </div>
+          </div>
+
           {orgs.length === 0 ? (
             <div className="empty-state"><div className="empty-icon">🏢</div>No organizations yet.</div>
           ) : orgs.map(o => {
@@ -739,6 +828,9 @@ export default function Admin() {
           onClose={() => setOrgModulesModal(null)}
           onSaved={loadOrgs}
         />
+      )}
+      {appModulesOpen && (
+        <AppModulesModal onClose={() => setAppModulesOpen(false)} />
       )}
     </div>
   )
