@@ -401,18 +401,27 @@ export default function Dashboard() {
       profile:   '/ilab/icon-profile.svg',
     }
 
-    // Load global URL settings (mileage, labsafety)
-    const { data: settingsData } = await sb.from('settings').select('key, value').in('key', ['mileage_url', 'labsafety_url'])
+    const imgPrefix = isSolo ? 'solo_img_' : 'img_'
+
+    // Load URL settings + global icon images in parallel
+    const [{ data: settingsData }, { data: globalImgData }] = await Promise.all([
+      sb.from('settings').select('key, value').in('key', ['mileage_url', 'labsafety_url']),
+      sb.from('settings').select('key, value').like('key', `${imgPrefix}%`),
+    ])
     ;(settingsData || []).forEach(r => {
       if (r.key === 'mileage_url') setMileageUrl(r.value)
       else if (r.key === 'labsafety_url') setLabSafetyUrl(r.value)
     })
+    // Apply global images uploaded by super admin
+    ;(globalImgData || []).forEach(r => {
+      const moduleKey = r.key.replace(imgPrefix, '')
+      if (r.value) imgs[moduleKey] = r.value
+    })
 
-    // Load per-org module images for team users only (solo and global have no custom images)
+    // Override with per-org images for team users (org images take priority over global)
     if (session?.organizationId && !isSolo) {
       const { data: orgData } = await sb.from('organizations').select('module_images').eq('id', session.organizationId).maybeSingle()
-      const orgImgs = orgData?.module_images || {}
-      Object.assign(imgs, orgImgs)
+      Object.assign(imgs, orgData?.module_images || {})
     }
 
     setModuleImages(imgs)
