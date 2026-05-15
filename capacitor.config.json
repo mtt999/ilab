@@ -1,0 +1,12 @@
+{
+  "appId": "com.motlagh.ilab",
+  "appName": "iLab",
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "backgroundColor": "#1D9E75",
+      "showSpinner": false
+    }
+  }
+}
