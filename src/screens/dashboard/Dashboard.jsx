@@ -341,8 +341,14 @@ export default function Dashboard() {
         let mods = soloRes.data?.active_modules
         try {
           const soloPool = settingsRes?.data?.value ? JSON.parse(settingsRes.data.value) : null
-          if (soloPool !== null && mods?.length) {
-            mods = mods.filter(k => soloPool.includes(k) || k === 'profile')
+          if (soloPool !== null) {
+            if (mods?.length) {
+              const filtered = mods.filter(k => soloPool.includes(k) || k === 'profile')
+              const missing = soloPool.filter(k => !filtered.includes(k) && k !== 'profile')
+              mods = [...filtered, ...missing]
+            } else {
+              mods = soloPool
+            }
           }
         } catch {}
         setActiveModules(mods?.length ? mods : null)
@@ -363,8 +369,16 @@ export default function Dashboard() {
           const effectivePool = appPool !== null && orgPool !== null
             ? orgPool.filter(k => appPool.includes(k))
             : (appPool ?? orgPool)
-          if (effectivePool !== null && mods?.length) {
-            mods = mods.filter(k => effectivePool.includes(k) || k === 'profile')
+          if (effectivePool !== null) {
+            if (mods?.length) {
+              // Keep saved order, remove no-longer-allowed modules, append newly-allowed ones
+              const filtered = mods.filter(k => effectivePool.includes(k) || k === 'profile')
+              const missing = effectivePool.filter(k => !filtered.includes(k) && k !== 'profile')
+              mods = [...filtered, ...missing]
+            } else {
+              // No saved prefs — pool defines what's visible
+              mods = effectivePool
+            }
           }
         } catch {}
         setActiveModules(mods?.length ? mods : null)
