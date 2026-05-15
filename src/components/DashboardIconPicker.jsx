@@ -119,8 +119,24 @@ export default function DashboardIconPicker({ session, loginMode, onDone }) {
         if (session?.role === 'user' || session?.role === 'student') {
           queries.push(sb.from('user_screen_access').select('screen_key').eq('user_id', session.userId))
         }
-        const [prefsRes, accessRes] = await Promise.all(queries)
+        // Always fetch org-level allowed modules (set by super admin)
+        queries.push(
+          session?.organizationId
+            ? sb.from('organizations').select('allowed_modules').eq('id', session.organizationId).maybeSingle()
+            : Promise.resolve(null)
+        )
+        const results = await Promise.all(queries)
+        const prefsRes = results[0]
+        const accessRes = (session?.role === 'user' || session?.role === 'student') ? results[1] : null
+        const orgRes = results[results.length - 1]
+
         savedModules = prefsRes.data?.[0]?.active_modules
+
+        // Apply org-level pool: super admin defines which icons this org can use
+        const orgPool = orgRes?.data?.allowed_modules || null
+        if (orgPool !== null) {
+          localAvailable = localAvailable.filter(m => orgPool.includes(m.key) || m.key === 'profile')
+        }
 
         if (session?.role === 'student') {
           pool = prefsRes.data?.[0]?.allowed_modules || []

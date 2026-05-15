@@ -286,6 +286,74 @@ function UserModal({ user, orgs, defaultOrgId, isSuperAdmin, defaultRole, onClos
   )
 }
 
+// ── Org modules modal (super admin only) ─────────────────────
+const ORG_CONFIGURABLE_MODULES = ALL_MODULES_META.filter(m => m.key !== 'profile')
+
+function OrgModulesModal({ org, onClose, onSaved }) {
+  const { toast } = useAppStore()
+  const [selected, setSelected] = useState(null)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    sb.from('organizations').select('allowed_modules').eq('id', org.id).maybeSingle()
+      .then(({ data }) => {
+        if (data?.allowed_modules) {
+          setSelected(new Set(data.allowed_modules))
+        } else {
+          setSelected(new Set(ORG_CONFIGURABLE_MODULES.map(m => m.key)))
+        }
+      })
+  }, [org.id])
+
+  function toggle(key) {
+    setSelected(prev => { const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next })
+  }
+
+  async function save() {
+    setSaving(true)
+    const allKeys = ORG_CONFIGURABLE_MODULES.map(m => m.key)
+    const selectedKeys = allKeys.filter(k => selected.has(k))
+    const toSave = selectedKeys.length === allKeys.length ? null : selectedKeys
+    const { error } = await sb.from('organizations').update({ allowed_modules: toSave }).eq('id', org.id)
+    if (error) { toast('Error saving: ' + error.message); setSaving(false); return }
+    toast(`Icon access saved for ${org.name}`)
+    onSaved(); onClose()
+  }
+
+  return (
+    <Modal onClose={onClose}>
+      <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>Dashboard Icons — {org.name}</div>
+      <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 20, lineHeight: 1.6 }}>
+        Select which icons the org admin of this organization can enable on their dashboard. Unchecked icons will be hidden for all users in this org.
+      </div>
+      {selected === null ? <div className="spinner" style={{ margin: '20px auto' }} /> : (
+        <>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+            <button className="btn btn-sm" onClick={() => setSelected(new Set(ORG_CONFIGURABLE_MODULES.map(m => m.key)))}>Select all</button>
+            <button className="btn btn-sm" onClick={() => setSelected(new Set())}>Clear all</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20, maxHeight: '55vh', overflowY: 'auto' }}>
+            {ORG_CONFIGURABLE_MODULES.map(m => (
+              <label key={m.key} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '10px 14px', borderRadius: 8, border: `1.5px solid ${selected.has(m.key) ? 'var(--accent)' : 'var(--border)'}`, background: selected.has(m.key) ? 'var(--accent-light)' : 'var(--surface)' }}>
+                <input type="checkbox" checked={selected.has(m.key)} onChange={() => toggle(m.key)} style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
+                <span style={{ fontSize: 18, lineHeight: 1 }}>{m.icon}</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{m.label}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>{m.sub}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </>
+      )}
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button className="btn btn-primary" onClick={save} disabled={saving || selected === null}>{saving ? 'Saving…' : 'Save'}</button>
+        <button className="btn" onClick={onClose}>Cancel</button>
+      </div>
+    </Modal>
+  )
+}
+
 // ── Org modal (super admin only) ──────────────────────────────
 function OrgModal({ org, onClose, onSaved }) {
   const { toast } = useAppStore()
@@ -411,9 +479,10 @@ export default function Admin() {
   const [orgFilter, setOrgFilter] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const [userModal, setUserModal]     = useState(null)
-  const [orgModal, setOrgModal]       = useState(null)
-  const [accessModal, setAccessModal] = useState(null)
+  const [userModal, setUserModal]         = useState(null)
+  const [orgModal, setOrgModal]           = useState(null)
+  const [accessModal, setAccessModal]     = useState(null)
+  const [orgModulesModal, setOrgModulesModal] = useState(null)
 
   // Super admin: images tab is accessed standalone (no tab bar), so exclude it from the tab list
   const tabs = isSuperAdmin
@@ -619,12 +688,15 @@ export default function Admin() {
               <div key={o.id} className="card" style={{ padding: '14px 18px', marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 15 }}>{o.name}</div>
+                    <button onClick={() => setOrgModulesModal(o)} style={{ fontWeight: 600, fontSize: 15, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', padding: 0, textAlign: 'left', textDecoration: 'underline dotted' }}>
+                      {o.name}
+                    </button>
                     <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2, fontFamily: 'var(--mono)' }}>
                       {o.slug} · {count} user{count !== 1 ? 's' : ''}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-sm" onClick={() => setOrgModulesModal(o)}>Icons</button>
                     <button className="btn btn-sm" onClick={() => setOrgModal(o)}>Edit</button>
                     <button className="btn btn-sm btn-danger" onClick={() => deleteOrg(o.id)}>Delete</button>
                   </div>
@@ -659,6 +731,13 @@ export default function Admin() {
           user={accessModal}
           onClose={() => setAccessModal(null)}
           onSaved={loadUsers}
+        />
+      )}
+      {orgModulesModal && (
+        <OrgModulesModal
+          org={orgModulesModal}
+          onClose={() => setOrgModulesModal(null)}
+          onSaved={loadOrgs}
         />
       )}
     </div>
