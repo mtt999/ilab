@@ -751,6 +751,7 @@ export default function Admin() {
   const [users, setUsers]     = useState([])
   const [orgs, setOrgs]       = useState([])
   const [orgCounts, setOrgCounts] = useState({})
+  const [orgAdmins, setOrgAdmins] = useState([])
   const [search, setSearch]   = useState('')
   const [orgFilter, setOrgFilter] = useState('')
   const [loading, setLoading] = useState(false)
@@ -773,14 +774,16 @@ export default function Admin() {
   }, [tab, orgFilter])
 
   async function loadOrgs() {
-    const [{ data: orgData }, { data: countData }] = await Promise.all([
+    const [{ data: orgData }, { data: countData }, { data: adminData }] = await Promise.all([
       sb.from('organizations').select('*').order('name'),
       sb.from('users').select('organization_id').not('organization_id', 'is', null),
+      sb.from('users').select('id, name, email, organization_id, is_active').eq('role', 'admin').not('organization_id', 'is', null),
     ])
     setOrgs(orgData || [])
     const counts = {}
     ;(countData || []).forEach(u => { counts[u.organization_id] = (counts[u.organization_id] || 0) + 1 })
     setOrgCounts(counts)
+    setOrgAdmins(adminData || [])
   }
 
   async function loadUsers() {
@@ -983,9 +986,10 @@ export default function Admin() {
             <div className="empty-state"><div className="empty-icon">🏢</div>No organizations yet.</div>
           ) : orgs.map(o => {
             const count = orgCounts[o.id] || 0
+            const admins = orgAdmins.filter(a => a.organization_id === o.id)
             return (
               <div key={o.id} className="card" style={{ padding: '14px 18px', marginBottom: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                   <div>
                     <button onClick={() => setOrgModulesModal(o)} style={{ fontWeight: 600, fontSize: 15, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', padding: 0, textAlign: 'left', textDecoration: 'underline dotted' }}>
                       {o.name}
@@ -994,7 +998,20 @@ export default function Admin() {
                       {o.slug} · {count} user{count !== 1 ? 's' : ''}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    {admins.length > 0 && (
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {admins.map(a => (
+                          <button key={a.id} onClick={() => setUserModal(a)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', textAlign: 'left' }}>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                              <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 99, background: '#FEF3C7', color: '#92400E', fontWeight: 600 }}>Admin</span>
+                              {a.name}
+                            </span>
+                            <span style={{ fontSize: 11, color: 'var(--text3)' }}>{a.email}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <button className="btn btn-sm" onClick={() => setOrgModulesModal(o)}>Icons</button>
                     <button className="btn btn-sm" onClick={() => setOrgModal(o)}>Edit</button>
                     <button className="btn btn-sm btn-danger" onClick={() => deleteOrg(o.id)}>Delete</button>
