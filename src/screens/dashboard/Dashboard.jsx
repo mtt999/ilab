@@ -366,9 +366,8 @@ export default function Dashboard() {
           let appPool = null
           try { appPool = appRes?.data?.value ? JSON.parse(appRes.data.value) : null } catch {}
           const orgPool = orgRes?.data?.allowed_modules || null
-          const effectivePool = appPool !== null && orgPool !== null
-            ? orgPool.filter(k => appPool.includes(k))
-            : (appPool ?? orgPool)
+          // Org pool overrides global pool; global is the default when no org pool is set
+          const effectivePool = orgPool ?? appPool
           if (effectivePool !== null) {
             if (mods?.length) {
               // Keep saved order, remove no-longer-allowed modules, append newly-allowed ones

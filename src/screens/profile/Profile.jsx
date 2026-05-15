@@ -269,9 +269,8 @@ function DashboardIconsPanel({ session }) {
         let appPool = null
         try { appPool = appRes?.data?.value ? JSON.parse(appRes.data.value) : null } catch {}
         const orgPool = orgRes?.data?.allowed_modules || null
-        const effectivePool = appPool !== null && orgPool !== null
-          ? orgPool.filter(k => appPool.includes(k))
-          : (appPool ?? orgPool)
+        // Org pool overrides global pool; global is the default when no org pool is set
+        const effectivePool = orgPool ?? appPool
         setAdminPool(effectivePool)
         if (session?.role === 'student') {
           const pool = data?.allowed_modules || []

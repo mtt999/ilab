@@ -152,9 +152,8 @@ export default function DashboardIconPicker({ session, loginMode, onDone }) {
         const orgPool = orgRes?.data?.allowed_modules || null
 
         // Combine: global pool first, then org pool further restricts
-        const effectivePool = appPool !== null && orgPool !== null
-          ? orgPool.filter(k => appPool.includes(k))
-          : (appPool ?? orgPool)
+        // Org pool overrides global pool; global is the default when no org pool is set
+        const effectivePool = orgPool ?? appPool
 
         if (effectivePool !== null) {
           localAvailable = localAvailable.filter(m => effectivePool.includes(m.key) || m.key === 'profile')
