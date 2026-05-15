@@ -843,15 +843,17 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
-        {tabs.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            style={{ padding: '7px 16px', borderRadius: 99, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', background: tab === t.key ? 'var(--accent)' : 'var(--surface2)', color: tab === t.key ? '#fff' : 'var(--text2)' }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Tabs — only shown for org admins, not super admin */}
+      {!isSuperAdmin && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
+          {tabs.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              style={{ padding: '7px 16px', borderRadius: 99, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', background: tab === t.key ? 'var(--accent)' : 'var(--surface2)', color: tab === t.key ? '#fff' : 'var(--text2)' }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
 
 
@@ -905,7 +907,7 @@ export default function Admin() {
       {!isSuperAdmin && tab === 'orgsettings' && <OrgSettingsPanel session={session} />}
 
       {/* ── ORGANIZATIONS (super admin only) ── */}
-      {tab === 'organizations' && isSuperAdmin && (
+      {isSuperAdmin && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
             <button className="btn btn-primary btn-sm" onClick={() => setOrgModal('add')}>+ New organization</button>
