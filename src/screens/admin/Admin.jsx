@@ -361,6 +361,83 @@ function AppModulesModal({ onClose }) {
   )
 }
 
+// ── Solo users global modules modal (super admin only) ────────
+const SOLO_CONFIGURABLE_MODULES = ALL_MODULES_META.filter(m => !m.soloLocked && m.key !== 'profile')
+
+function SoloModulesModal({ onClose }) {
+  const { toast } = useAppStore()
+  const [selected, setSelected] = useState(null)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    sb.from('settings').select('value').eq('key', 'solo_allowed_modules').maybeSingle()
+      .then(({ data }) => {
+        try {
+          const parsed = data?.value ? JSON.parse(data.value) : null
+          setSelected(parsed ? new Set(parsed) : new Set(SOLO_CONFIGURABLE_MODULES.map(m => m.key)))
+        } catch {
+          setSelected(new Set(SOLO_CONFIGURABLE_MODULES.map(m => m.key)))
+        }
+      })
+  }, [])
+
+  function toggle(key) {
+    setSelected(prev => { const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next })
+  }
+
+  async function save() {
+    setSaving(true)
+    const allKeys = SOLO_CONFIGURABLE_MODULES.map(m => m.key)
+    const selectedKeys = allKeys.filter(k => selected.has(k))
+    const toSave = selectedKeys.length === allKeys.length ? null : selectedKeys
+    const value = toSave === null ? null : JSON.stringify(toSave)
+    if (value === null) {
+      await sb.from('settings').delete().eq('key', 'solo_allowed_modules')
+    } else {
+      const { error } = await sb.from('settings').upsert({ key: 'solo_allowed_modules', value }, { onConflict: 'key' })
+      if (error) { toast('Error saving: ' + error.message); setSaving(false); return }
+    }
+    toast('Solo user icon access saved.')
+    onClose()
+  }
+
+  return (
+    <Modal onClose={onClose}>
+      <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>Dashboard Icons — Solo Users (Global)</div>
+      <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 20, lineHeight: 1.6 }}>
+        Select which icons solo users can see on their home page. Unchecked icons will be hidden for all solo accounts.
+      </div>
+      {selected === null ? <div className="spinner" style={{ margin: '20px auto' }} /> : (
+        <>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+            <button className="btn btn-sm" onClick={() => setSelected(new Set(SOLO_CONFIGURABLE_MODULES.map(m => m.key)))}>Select all</button>
+            <button className="btn btn-sm" onClick={() => setSelected(new Set())}>Clear all</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20, maxHeight: '55vh', overflowY: 'auto' }}>
+            {SOLO_CONFIGURABLE_MODULES.map(m => (
+              <label key={m.key} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '10px 14px', borderRadius: 8, border: `1.5px solid ${selected.has(m.key) ? '#534AB7' : 'var(--border)'}`, background: selected.has(m.key) ? '#EEEDFE' : 'var(--surface)' }}>
+                <input type="checkbox" checked={selected.has(m.key)} onChange={() => toggle(m.key)} style={{ width: 16, height: 16, accentColor: '#534AB7' }} />
+                <span style={{ fontSize: 18, lineHeight: 1 }}>{m.icon}</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{m.label}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>{m.sub}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </>
+      )}
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button onClick={save} disabled={saving || selected === null}
+          style={{ padding: '9px 22px', background: '#534AB7', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: (saving || selected === null) ? 'not-allowed' : 'pointer', opacity: (saving || selected === null) ? 0.6 : 1 }}>
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+        <button className="btn" onClick={onClose}>Cancel</button>
+      </div>
+    </Modal>
+  )
+}
+
 function OrgModulesModal({ org, onClose, onSaved }) {
   const { toast } = useAppStore()
   const [selected, setSelected] = useState(null)
@@ -556,6 +633,7 @@ export default function Admin() {
   const [accessModal, setAccessModal]           = useState(null)
   const [orgModulesModal, setOrgModulesModal]   = useState(null)
   const [appModulesOpen, setAppModulesOpen]     = useState(false)
+  const [soloModulesOpen, setSoloModulesOpen]   = useState(false)
 
   // Super admin: images tab is accessed standalone (no tab bar), so exclude it from the tab list
   const tabs = isSuperAdmin
@@ -755,7 +833,7 @@ export default function Admin() {
           </div>
 
           {/* Global app-level icon restriction */}
-          <div className="card" style={{ padding: '14px 18px', marginBottom: 16, border: '1.5px solid var(--accent)', background: 'var(--accent-light)' }}>
+          <div className="card" style={{ padding: '14px 18px', marginBottom: 10, border: '1.5px solid var(--accent)', background: 'var(--accent-light)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <button onClick={() => setAppModulesOpen(true)} style={{ fontWeight: 700, fontSize: 15, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', padding: 0, textAlign: 'left', textDecoration: 'underline dotted' }}>
@@ -766,6 +844,21 @@ export default function Admin() {
                 </div>
               </div>
               <button className="btn btn-sm btn-primary" onClick={() => setAppModulesOpen(true)}>Icons</button>
+            </div>
+          </div>
+
+          {/* Global solo users icon restriction */}
+          <div className="card" style={{ padding: '14px 18px', marginBottom: 16, border: '1.5px solid #534AB7', background: '#EEEDFE' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <button onClick={() => setSoloModulesOpen(true)} style={{ fontWeight: 700, fontSize: 15, background: 'none', border: 'none', cursor: 'pointer', color: '#534AB7', padding: 0, textAlign: 'left', textDecoration: 'underline dotted' }}>
+                  👤 Solo Users (Global)
+                </button>
+                <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
+                  Icons available to all solo user accounts across the app
+                </div>
+              </div>
+              <button onClick={() => setSoloModulesOpen(true)} style={{ padding: '5px 14px', background: '#534AB7', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Icons</button>
             </div>
           </div>
 
@@ -831,6 +924,9 @@ export default function Admin() {
       )}
       {appModulesOpen && (
         <AppModulesModal onClose={() => setAppModulesOpen(false)} />
+      )}
+      {soloModulesOpen && (
+        <SoloModulesModal onClose={() => setSoloModulesOpen(false)} />
       )}
     </div>
   )

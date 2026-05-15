@@ -109,8 +109,16 @@ export default function DashboardIconPicker({ session, loginMode, onDone }) {
       }
 
       if (loginMode === 'solo' && session?.userId) {
-        const { data } = await sb.from('solo_users').select('active_modules').eq('id', session.userId).maybeSingle()
-        savedModules = data?.active_modules
+        const [soloRes, soloSettingsRes] = await Promise.all([
+          sb.from('solo_users').select('active_modules').eq('id', session.userId).maybeSingle(),
+          sb.from('settings').select('value').eq('key', 'solo_allowed_modules').maybeSingle(),
+        ])
+        savedModules = soloRes.data?.active_modules
+        let soloPool = null
+        try { soloPool = soloSettingsRes?.data?.value ? JSON.parse(soloSettingsRes.data.value) : null } catch { soloPool = null }
+        if (soloPool !== null) {
+          localAvailable = localAvailable.filter(m => soloPool.includes(m.key) || m.key === 'profile')
+        }
       } else if (session?.userId) {
         const queries = [
           sb.from('user_dashboard_prefs').select('active_modules, allowed_modules').eq('user_id', session.userId).order('created_at', { ascending: false }).limit(1),
