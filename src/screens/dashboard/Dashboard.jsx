@@ -447,13 +447,21 @@ export default function Dashboard() {
 
   const isSuperAdmin = isAdmin && !session?.userId
 
-  // Super admin: just show greeting — all tools are in the Admin Panel
+  // Super admin: greeting + shortcut to admin panel
   if (isSuperAdmin) {
     return (
       <div>
         <div style={{ marginBottom: 28 }}>
           <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.4px', marginBottom: 4 }}>{greeting()}, {session?.username}</div>
           <div style={{ fontSize: 13, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{dateStr} · iLab Super Admin</div>
+        </div>
+        <div
+          onClick={() => setScreen('orgadmin')}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'var(--accent)', color: '#fff', borderRadius: 'var(--radius-lg)', padding: '14px 24px', cursor: 'pointer', fontWeight: 600, fontSize: 15, boxShadow: '0 2px 10px rgba(0,0,0,0.12)', transition: 'opacity 0.15s' }}
+          onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
+          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+        >
+          <span style={{ fontSize: 20 }}>⚙️</span> Open Admin Panel
         </div>
       </div>
     )
