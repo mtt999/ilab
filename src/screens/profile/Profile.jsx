@@ -221,6 +221,7 @@ function DashboardIconsPanel({ session }) {
   const [dragOverKey, setDragOverKey] = useState(null)
   const dragKeyRef = useRef(null)
   const [allowedPool, setAllowedPool] = useState(null)
+  const [adminPool, setAdminPool] = useState(null) // pool set by super admin (solo or org+app)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => { load() }, [session?.userId])
@@ -243,29 +244,51 @@ function DashboardIconsPanel({ session }) {
         return
       }
       if (isSolo) {
-        const { data } = await sb.from('solo_users').select('active_modules').eq('id', session.userId).maybeSingle()
-        const savedArr = data?.active_modules?.length ? data.active_modules : null
-        setSelected(new Set(savedArr || allKeys))
-        setDisplayOrder(initOrder(savedArr, allKeys))
+        const [soloRes, settingsRes] = await Promise.all([
+          sb.from('solo_users').select('active_modules').eq('id', session.userId).maybeSingle(),
+          sb.from('settings').select('value').eq('key', 'solo_allowed_modules').maybeSingle(),
+        ])
+        let pool = null
+        try { pool = settingsRes?.data?.value ? JSON.parse(settingsRes.data.value) : null } catch {}
+        setAdminPool(pool)
+        const displayKeys = pool !== null ? allKeys.filter(k => pool.includes(k) || k === 'profile') : allKeys
+        const savedArr = soloRes.data?.active_modules?.length
+          ? soloRes.data.active_modules.filter(k => displayKeys.includes(k))
+          : null
+        setSelected(new Set(savedArr || displayKeys))
+        setDisplayOrder(initOrder(savedArr, displayKeys))
       } else {
-        const { data: rows } = await sb.from('user_dashboard_prefs')
-          .select('active_modules, allowed_modules')
-          .eq('user_id', session.userId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-        const data = rows?.[0] ?? null
+        const [prefsRes, orgRes, appRes] = await Promise.all([
+          sb.from('user_dashboard_prefs').select('active_modules, allowed_modules').eq('user_id', session.userId).order('created_at', { ascending: false }).limit(1),
+          session?.organizationId
+            ? sb.from('organizations').select('allowed_modules').eq('id', session.organizationId).maybeSingle()
+            : Promise.resolve(null),
+          sb.from('settings').select('value').eq('key', 'app_allowed_modules').maybeSingle(),
+        ])
+        const data = prefsRes.data?.[0] ?? null
+        let appPool = null
+        try { appPool = appRes?.data?.value ? JSON.parse(appRes.data.value) : null } catch {}
+        const orgPool = orgRes?.data?.allowed_modules || null
+        const effectivePool = appPool !== null && orgPool !== null
+          ? orgPool.filter(k => appPool.includes(k))
+          : (appPool ?? orgPool)
+        setAdminPool(effectivePool)
         if (session?.role === 'student') {
           const pool = data?.allowed_modules || []
           setAllowedPool(pool)
+          const poolKeys = effectivePool !== null ? pool.filter(k => effectivePool.includes(k)) : pool
           const savedArr = data?.active_modules?.length
-            ? data.active_modules.filter(k => pool.includes(k) || PINNED_MODULES.includes(k))
-            : pool
+            ? data.active_modules.filter(k => poolKeys.includes(k) || PINNED_MODULES.includes(k))
+            : poolKeys
           setSelected(new Set(savedArr))
-          setDisplayOrder(initOrder(savedArr, pool))
+          setDisplayOrder(initOrder(savedArr, poolKeys))
         } else {
-          const savedArr = data?.active_modules?.length ? data.active_modules : null
-          setSelected(new Set(savedArr || allKeys))
-          setDisplayOrder(initOrder(savedArr, allKeys))
+          const displayKeys = effectivePool !== null ? allKeys.filter(k => effectivePool.includes(k) || k === 'profile') : allKeys
+          const savedArr = data?.active_modules?.length
+            ? data.active_modules.filter(k => displayKeys.includes(k))
+            : null
+          setSelected(new Set(savedArr || displayKeys))
+          setDisplayOrder(initOrder(savedArr, displayKeys))
         }
       }
     } catch (e) {
@@ -320,9 +343,16 @@ function DashboardIconsPanel({ session }) {
     </div>
   )
 
-  const baseDisplay = session?.role === 'student' && allowedPool?.length
-    ? available.filter(m => allowedPool.includes(m.key) || PINNED_MODULES.includes(m.key))
-    : available
+  const baseDisplay = (() => {
+    if (session?.role === 'student' && allowedPool?.length) {
+      const studentPool = adminPool !== null
+        ? allowedPool.filter(k => adminPool.includes(k))
+        : allowedPool
+      return available.filter(m => studentPool.includes(m.key) || PINNED_MODULES.includes(m.key))
+    }
+    if (adminPool !== null) return available.filter(m => adminPool.includes(m.key) || m.key === 'profile')
+    return available
+  })()
 
   const displayModules = displayOrder !== null
     ? displayOrder.map(k => baseDisplay.find(m => m.key === k)).filter(Boolean)
