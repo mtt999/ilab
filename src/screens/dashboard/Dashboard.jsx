@@ -394,19 +394,27 @@ export default function Dashboard() {
 
   useEffect(() => { loadSettings() }, [session?.userId])
   async function loadSettings() {
-    const { data, error } = await sb.from('settings').select('key, value')
-    if (error) { console.error('[loadSettings] settings query failed:', error.message); }
     const imgs = {
       pm:        '/ilab/icon-pm.svg',
       barcode:   '/ilab/icon-barcode.svg',
       barcodeqr: '/ilab/icon-barcodeqr.svg',
       profile:   '/ilab/icon-profile.svg',
     }
-    ;(data || []).forEach(r => {
+
+    // Load global URL settings (mileage, labsafety)
+    const { data: settingsData } = await sb.from('settings').select('key, value').in('key', ['mileage_url', 'labsafety_url'])
+    ;(settingsData || []).forEach(r => {
       if (r.key === 'mileage_url') setMileageUrl(r.value)
       else if (r.key === 'labsafety_url') setLabSafetyUrl(r.value)
-      else if (r.key?.startsWith('img_')) imgs[r.key.replace('img_', '')] = r.value
     })
+
+    // Load per-org module images for team users only (solo and global have no custom images)
+    if (session?.organizationId && !isSolo) {
+      const { data: orgData } = await sb.from('organizations').select('module_images').eq('id', session.organizationId).maybeSingle()
+      const orgImgs = orgData?.module_images || {}
+      Object.assign(imgs, orgImgs)
+    }
+
     setModuleImages(imgs)
   }
 

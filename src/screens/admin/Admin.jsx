@@ -6,32 +6,30 @@ import { hashPassword } from '../../lib/crypto'
 import { ALL_MODULES_META } from '../../components/DashboardIconPicker'
 
 const MODULE_IMAGE_DEFS = [
-  { key: 'supply',       settingsKey: 'img_supply',       label: 'Supply Inventory',    icon: '📦' },
-  { key: 'projects',     settingsKey: 'img_projects',     label: 'Project & Material',  icon: '🧪' },
-  { key: 'training',     settingsKey: 'img_training',     label: 'Training Records',    icon: '🎓' },
-  { key: 'equipment',    settingsKey: 'img_equipment',    label: 'Equipment Inventory', icon: '🔧' },
-  { key: 'equipmenthub', settingsKey: 'img_equipmenthub', label: 'Equipment Hub',       icon: '📚' },
-  { key: 'booking',      settingsKey: 'img_booking',      label: 'Booking Equipment',   icon: '📅' },
-  { key: 'remessages',   settingsKey: 'img_remessages',   label: 'RE Messages',         icon: '💬' },
-  { key: 'pm',           settingsKey: 'img_pm',           label: 'Project Management',  icon: '📋' },
-  { key: 'mileage',      settingsKey: 'img_mileage',      label: 'Mileage Form',        icon: '🚗' },
-  { key: 'labsafety',    settingsKey: 'img_labsafety',    label: 'Lab Safety',          icon: '🦺' },
+  { key: 'supply',       label: 'Supply Inventory',    icon: '📦' },
+  { key: 'projects',     label: 'Project & Material',  icon: '🧪' },
+  { key: 'training',     label: 'Training Records',    icon: '🎓' },
+  { key: 'equipment',    label: 'Equipment Inventory', icon: '🔧' },
+  { key: 'equipmenthub', label: 'Equipment Hub',       icon: '📚' },
+  { key: 'booking',      label: 'Booking Equipment',   icon: '📅' },
+  { key: 'remessages',   label: 'RE Messages',         icon: '💬' },
+  { key: 'pm',           label: 'Project Management',  icon: '📋' },
+  { key: 'mileage',      label: 'Mileage Form',        icon: '🚗' },
+  { key: 'labsafety',    label: 'Lab Safety',          icon: '🦺' },
 ]
 
-function ModuleImagesPanel() {
+// Images are stored per-org in organizations.module_images (JSONB)
+function ModuleImagesPanel({ orgId }) {
   const { toast } = useAppStore()
   const [images, setImages] = useState({})
   const [uploading, setUploading] = useState(null)
   const fileRefs = useRef({})
 
-  useEffect(() => { loadImages() }, [])
+  useEffect(() => { if (orgId) loadImages() }, [orgId])
 
   async function loadImages() {
-    const keys = MODULE_IMAGE_DEFS.map(m => m.settingsKey)
-    const { data } = await sb.from('settings').select('key, value').in('key', keys)
-    const map = {}
-    ;(data || []).forEach(r => { map[r.key] = r.value })
-    setImages(map)
+    const { data } = await sb.from('organizations').select('module_images').eq('id', orgId).maybeSingle()
+    setImages(data?.module_images || {})
   }
 
   async function handleUpload(def, file) {
@@ -39,15 +37,16 @@ function ModuleImagesPanel() {
     setUploading(def.key)
     try {
       const ext = file.name.split('.').pop() || 'jpg'
-      const path = `module-images/${def.key}-${Date.now()}.${ext}`
+      const path = `module-images/${orgId}/${def.key}-${Date.now()}.${ext}`
       const { error: upErr } = await sb.storage.from('project-files').upload(path, file, { upsert: true, contentType: file.type })
-      if (upErr) { toast('Storage upload failed: ' + upErr.message + ' — make sure the "project-files" bucket exists in Supabase Dashboard → Storage.'); return }
+      if (upErr) { toast('Storage upload failed: ' + upErr.message); return }
       const { data: urlData } = sb.storage.from('project-files').getPublicUrl(path)
       const url = urlData.publicUrl
-      console.log('[ModuleImages] saved URL:', def.settingsKey, url)
-      const { error: saveErr } = await sb.from('settings').upsert({ key: def.settingsKey, value: url }, { onConflict: 'key' })
-      if (saveErr) { toast('Image uploaded but DB save failed: ' + saveErr.message + ' — run fix_settings_rls.sql in Supabase.'); return }
-      setImages(prev => ({ ...prev, [def.settingsKey]: url }))
+      const { data: orgData } = await sb.from('organizations').select('module_images').eq('id', orgId).maybeSingle()
+      const current = orgData?.module_images || {}
+      const { error: saveErr } = await sb.from('organizations').update({ module_images: { ...current, [def.key]: url } }).eq('id', orgId)
+      if (saveErr) { toast('Image uploaded but save failed: ' + saveErr.message); return }
+      setImages(prev => ({ ...prev, [def.key]: url }))
       toast(`${def.label} image saved ✓`)
     } finally {
       setUploading(null)
@@ -56,19 +55,22 @@ function ModuleImagesPanel() {
   }
 
   async function clearImage(def) {
-    await sb.from('settings').delete().eq('key', def.settingsKey)
-    setImages(prev => { const n = { ...prev }; delete n[def.settingsKey]; return n })
+    const { data: orgData } = await sb.from('organizations').select('module_images').eq('id', orgId).maybeSingle()
+    const current = { ...(orgData?.module_images || {}) }
+    delete current[def.key]
+    await sb.from('organizations').update({ module_images: Object.keys(current).length ? current : null }).eq('id', orgId)
+    setImages(prev => { const n = { ...prev }; delete n[def.key]; return n })
     toast(`${def.label} image removed.`)
   }
 
   return (
     <div>
       <div style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 18, lineHeight: 1.6 }}>
-        Upload background images for dashboard module cards. Best size: landscape, around 800×500 px. Changes apply after refreshing the dashboard.
+        Upload background images for your organization's dashboard module cards. Best size: landscape, around 800×500 px.
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 14 }}>
         {MODULE_IMAGE_DEFS.map(def => {
-          const currentUrl = images[def.settingsKey]
+          const currentUrl = images[def.key]
           const isUploading = uploading === def.key
           return (
             <div key={def.key} style={{ borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden', background: 'var(--surface)' }}>
@@ -700,16 +702,6 @@ export default function Admin() {
     !search || u.name?.toLowerCase().includes(search.toLowerCase()) || u.email?.toLowerCase().includes(search.toLowerCase())
   )
 
-  // Super admin: Module Icons is a standalone view with no tab bar
-  if (isSuperAdmin && tab === 'images') {
-    return (
-      <div>
-        <div className="section-title" style={{ marginBottom: 20 }}>Module Icons</div>
-        <ModuleImagesPanel />
-      </div>
-    )
-  }
-
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -820,7 +812,7 @@ export default function Admin() {
       )}
 
       {/* ── MODULE IMAGES ── */}
-      {tab === 'images' && <ModuleImagesPanel />}
+      {tab === 'images' && <ModuleImagesPanel orgId={myOrgId} />}
 
       {/* ── ORG SETTINGS (org admin only) ── */}
       {!isSuperAdmin && tab === 'orgsettings' && <OrgSettingsPanel session={session} />}
