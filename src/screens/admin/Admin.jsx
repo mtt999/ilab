@@ -291,11 +291,92 @@ function UserModal({ user, orgs, defaultOrgId, isSuperAdmin, defaultRole, onClos
 // ── Org modules modal (super admin only) ─────────────────────
 const ORG_CONFIGURABLE_MODULES = ALL_MODULES_META.filter(m => m.key !== 'profile')
 
+// ── Shared image grid for global icon images ──────────────────
+function GlobalImageGrid({ modules, imagePrefix }) {
+  const { toast } = useAppStore()
+  const [images, setImages] = useState(null)
+  const [uploading, setUploading] = useState(null)
+  const fileRefs = useRef({})
+
+  useEffect(() => {
+    const keys = modules.map(m => `${imagePrefix}${m.key}`)
+    sb.from('settings').select('key, value').in('key', keys)
+      .then(({ data }) => {
+        const map = {}
+        ;(data || []).forEach(r => { map[r.key.replace(imagePrefix, '')] = r.value })
+        setImages(map)
+      })
+  }, [])
+
+  async function handleUpload(m, file) {
+    if (!file) return
+    setUploading(m.key)
+    try {
+      const ext = file.name.split('.').pop() || 'jpg'
+      const path = `module-images/global/${imagePrefix}${m.key}-${Date.now()}.${ext}`
+      const { error: upErr } = await sb.storage.from('project-files').upload(path, file, { upsert: true, contentType: file.type })
+      if (upErr) { toast('Upload failed: ' + upErr.message); return }
+      const { data: urlData } = sb.storage.from('project-files').getPublicUrl(path)
+      const url = urlData.publicUrl
+      const { error } = await sb.from('settings').upsert({ key: `${imagePrefix}${m.key}`, value: url }, { onConflict: 'key' })
+      if (error) { toast('Save failed: ' + error.message); return }
+      setImages(prev => ({ ...prev, [m.key]: url }))
+      toast(`${m.label} image saved ✓`)
+    } finally {
+      setUploading(null)
+      if (fileRefs.current[m.key]) fileRefs.current[m.key].value = ''
+    }
+  }
+
+  async function clearImage(m) {
+    await sb.from('settings').delete().eq('key', `${imagePrefix}${m.key}`)
+    setImages(prev => { const n = { ...prev }; delete n[m.key]; return n })
+    toast(`${m.label} image removed.`)
+  }
+
+  if (images === null) return <div className="spinner" style={{ margin: '20px auto' }} />
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
+      {modules.map(m => {
+        const currentUrl = images[m.key]
+        const isUploading = uploading === m.key
+        return (
+          <div key={m.key} style={{ borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden', background: 'var(--surface)' }}>
+            <div style={{ height: 80, position: 'relative', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {currentUrl
+                ? <img src={currentUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
+                : <div style={{ fontSize: 26, opacity: 0.35 }}>{m.icon}</div>
+              }
+              {currentUrl && (
+                <button onClick={() => clearImage(m)} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.55)', border: 'none', color: '#fff', borderRadius: 4, fontSize: 10, padding: '2px 6px', cursor: 'pointer' }}>✕</button>
+              )}
+              {isUploading && (
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div className="spinner" />
+                </div>
+              )}
+            </div>
+            <div style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.label}</div>
+              <button className="btn btn-sm btn-primary" disabled={isUploading} onClick={() => fileRefs.current[m.key]?.click()} style={{ fontSize: 10, padding: '3px 8px', flexShrink: 0 }}>
+                {currentUrl ? '↑' : '+'}
+              </button>
+              <input type="file" accept="image/*" ref={el => fileRefs.current[m.key] = el} style={{ display: 'none' }} onChange={e => handleUpload(m, e.target.files[0])} />
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── App-level modules modal (super admin only) ────────────────
 function AppModulesModal({ onClose }) {
   const { toast } = useAppStore()
   const [selected, setSelected] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [tab, setTab] = useState('icons')
 
   useEffect(() => {
     sb.from('settings').select('value').eq('key', 'app_allowed_modules').maybeSingle()
@@ -329,36 +410,56 @@ function AppModulesModal({ onClose }) {
     onClose()
   }
 
+  const tabBtn = (key, label) => (
+    <button onClick={() => setTab(key)} style={{ padding: '6px 16px', borderRadius: 99, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', background: tab === key ? 'var(--accent)' : 'var(--surface2)', color: tab === key ? '#fff' : 'var(--text2)' }}>{label}</button>
+  )
+
   return (
     <Modal onClose={onClose}>
-      <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>Dashboard Icons — Main App (Global)</div>
-      <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 20, lineHeight: 1.6 }}>
-        Select which icons are available across the entire app. Organizations can further restrict this list for their own users.
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
+        <div style={{ fontWeight: 600, fontSize: 16 }}>Dashboard Icons — Main App (Global)</div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text3)', lineHeight: 1, padding: '0 0 0 8px' }}>×</button>
       </div>
-      {selected === null ? <div className="spinner" style={{ margin: '20px auto' }} /> : (
-        <>
-          <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-            <button className="btn btn-sm" onClick={() => setSelected(new Set(ORG_CONFIGURABLE_MODULES.map(m => m.key)))}>Select all</button>
-            <button className="btn btn-sm" onClick={() => setSelected(new Set())}>Clear all</button>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20, maxHeight: '55vh', overflowY: 'auto' }}>
-            {ORG_CONFIGURABLE_MODULES.map(m => (
-              <label key={m.key} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '10px 14px', borderRadius: 8, border: `1.5px solid ${selected.has(m.key) ? 'var(--accent)' : 'var(--border)'}`, background: selected.has(m.key) ? 'var(--accent-light)' : 'var(--surface)' }}>
-                <input type="checkbox" checked={selected.has(m.key)} onChange={() => toggle(m.key)} style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
-                <span style={{ fontSize: 18, lineHeight: 1 }}>{m.icon}</span>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{m.label}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>{m.sub}</div>
-                </div>
-              </label>
-            ))}
-          </div>
-        </>
+      <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 16, lineHeight: 1.6 }}>
+        Control which icons are available across the entire app, and optionally upload background images for each icon card.
+      </div>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>{tabBtn('icons', 'Icon Access')}{tabBtn('images', 'Icon Images')}</div>
+
+      {tab === 'icons' && (
+        selected === null ? <div className="spinner" style={{ margin: '20px auto' }} /> : (
+          <>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+              <button className="btn btn-sm" onClick={() => setSelected(new Set(ORG_CONFIGURABLE_MODULES.map(m => m.key)))}>Select all</button>
+              <button className="btn btn-sm" onClick={() => setSelected(new Set())}>Clear all</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20, maxHeight: '55vh', overflowY: 'auto' }}>
+              {ORG_CONFIGURABLE_MODULES.map(m => (
+                <label key={m.key} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '10px 14px', borderRadius: 8, border: `1.5px solid ${selected.has(m.key) ? 'var(--accent)' : 'var(--border)'}`, background: selected.has(m.key) ? 'var(--accent-light)' : 'var(--surface)' }}>
+                  <input type="checkbox" checked={selected.has(m.key)} onChange={() => toggle(m.key)} style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
+                  <span style={{ fontSize: 18, lineHeight: 1 }}>{m.icon}</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{m.label}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text3)' }}>{m.sub}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn btn-primary" onClick={save} disabled={saving || selected === null}>{saving ? 'Saving…' : 'Save'}</button>
+              <button className="btn" onClick={onClose}>Cancel</button>
+            </div>
+          </>
+        )
       )}
-      <div style={{ display: 'flex', gap: 10 }}>
-        <button className="btn btn-primary" onClick={save} disabled={saving || selected === null}>{saving ? 'Saving…' : 'Save'}</button>
-        <button className="btn" onClick={onClose}>Cancel</button>
-      </div>
+
+      {tab === 'images' && (
+        <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingBottom: 8 }}>
+          <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 14, lineHeight: 1.6 }}>
+            These images appear as backgrounds on dashboard icon cards for all team users. Best size: landscape ~800×500 px. Org admins can override images for their own organization.
+          </div>
+          <GlobalImageGrid modules={ORG_CONFIGURABLE_MODULES} imagePrefix="img_" />
+        </div>
+      )}
     </Modal>
   )
 }
@@ -370,6 +471,7 @@ function SoloModulesModal({ onClose }) {
   const { toast } = useAppStore()
   const [selected, setSelected] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [tab, setTab] = useState('icons')
 
   useEffect(() => {
     sb.from('settings').select('value').eq('key', 'solo_allowed_modules').maybeSingle()
@@ -403,39 +505,59 @@ function SoloModulesModal({ onClose }) {
     onClose()
   }
 
+  const tabBtn = (key, label) => (
+    <button onClick={() => setTab(key)} style={{ padding: '6px 16px', borderRadius: 99, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', background: tab === key ? '#534AB7' : 'var(--surface2)', color: tab === key ? '#fff' : 'var(--text2)' }}>{label}</button>
+  )
+
   return (
     <Modal onClose={onClose}>
-      <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>Dashboard Icons — Solo Users (Global)</div>
-      <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 20, lineHeight: 1.6 }}>
-        Select which icons solo users can see on their home page. Unchecked icons will be hidden for all solo accounts.
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
+        <div style={{ fontWeight: 600, fontSize: 16 }}>Dashboard Icons — Solo Users (Global)</div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text3)', lineHeight: 1, padding: '0 0 0 8px' }}>×</button>
       </div>
-      {selected === null ? <div className="spinner" style={{ margin: '20px auto' }} /> : (
-        <>
-          <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-            <button className="btn btn-sm" onClick={() => setSelected(new Set(SOLO_CONFIGURABLE_MODULES.map(m => m.key)))}>Select all</button>
-            <button className="btn btn-sm" onClick={() => setSelected(new Set())}>Clear all</button>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20, maxHeight: '55vh', overflowY: 'auto' }}>
-            {SOLO_CONFIGURABLE_MODULES.map(m => (
-              <label key={m.key} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '10px 14px', borderRadius: 8, border: `1.5px solid ${selected.has(m.key) ? '#534AB7' : 'var(--border)'}`, background: selected.has(m.key) ? '#EEEDFE' : 'var(--surface)' }}>
-                <input type="checkbox" checked={selected.has(m.key)} onChange={() => toggle(m.key)} style={{ width: 16, height: 16, accentColor: '#534AB7' }} />
-                <span style={{ fontSize: 18, lineHeight: 1 }}>{m.icon}</span>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{m.label}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>{m.sub}</div>
-                </div>
-              </label>
-            ))}
-          </div>
-        </>
+      <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 16, lineHeight: 1.6 }}>
+        Control which icons solo users can see, and optionally upload background images for each icon card.
+      </div>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>{tabBtn('icons', 'Icon Access')}{tabBtn('images', 'Icon Images')}</div>
+
+      {tab === 'icons' && (
+        selected === null ? <div className="spinner" style={{ margin: '20px auto' }} /> : (
+          <>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+              <button className="btn btn-sm" onClick={() => setSelected(new Set(SOLO_CONFIGURABLE_MODULES.map(m => m.key)))}>Select all</button>
+              <button className="btn btn-sm" onClick={() => setSelected(new Set())}>Clear all</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20, maxHeight: '55vh', overflowY: 'auto' }}>
+              {SOLO_CONFIGURABLE_MODULES.map(m => (
+                <label key={m.key} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '10px 14px', borderRadius: 8, border: `1.5px solid ${selected.has(m.key) ? '#534AB7' : 'var(--border)'}`, background: selected.has(m.key) ? '#EEEDFE' : 'var(--surface)' }}>
+                  <input type="checkbox" checked={selected.has(m.key)} onChange={() => toggle(m.key)} style={{ width: 16, height: 16, accentColor: '#534AB7' }} />
+                  <span style={{ fontSize: 18, lineHeight: 1 }}>{m.icon}</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{m.label}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text3)' }}>{m.sub}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={save} disabled={saving || selected === null}
+                style={{ padding: '9px 22px', background: '#534AB7', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: (saving || selected === null) ? 'not-allowed' : 'pointer', opacity: (saving || selected === null) ? 0.6 : 1 }}>
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+              <button className="btn" onClick={onClose}>Cancel</button>
+            </div>
+          </>
+        )
       )}
-      <div style={{ display: 'flex', gap: 10 }}>
-        <button onClick={save} disabled={saving || selected === null}
-          style={{ padding: '9px 22px', background: '#534AB7', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: (saving || selected === null) ? 'not-allowed' : 'pointer', opacity: (saving || selected === null) ? 0.6 : 1 }}>
-          {saving ? 'Saving…' : 'Save'}
-        </button>
-        <button className="btn" onClick={onClose}>Cancel</button>
-      </div>
+
+      {tab === 'images' && (
+        <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingBottom: 8 }}>
+          <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 14, lineHeight: 1.6 }}>
+            These images appear as backgrounds on dashboard icon cards for all solo users. Best size: landscape ~800×500 px.
+          </div>
+          <GlobalImageGrid modules={SOLO_CONFIGURABLE_MODULES} imagePrefix="solo_img_" />
+        </div>
+      )}
     </Modal>
   )
 }
@@ -473,7 +595,10 @@ function OrgModulesModal({ org, onClose, onSaved }) {
 
   return (
     <Modal onClose={onClose}>
-      <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>Dashboard Icons — {org.name}</div>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
+        <div style={{ fontWeight: 600, fontSize: 16 }}>Dashboard Icons — {org.name}</div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text3)', lineHeight: 1, padding: '0 0 0 8px' }}>×</button>
+      </div>
       <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 20, lineHeight: 1.6 }}>
         Select which icons the org admin of this organization can enable on their dashboard. Unchecked icons will be hidden for all users in this org.
       </div>
