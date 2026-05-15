@@ -1,10 +1,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const isMobile = process.env.BUILD_TARGET === 'mobile'
+
 export default defineConfig({
   plugins: [react()],
-  base: '/ilab/',
+  base: isMobile ? '/' : '/ilab/',
   build: {
-    outDir: 'docs',
+    outDir: isMobile ? 'dist' : 'docs',
   },
 })

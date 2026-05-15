@@ -6,6 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "postbuild": "node scripts/post-build.mjs",
+    "build:mobile": "BUILD_TARGET=mobile vite build",
     "preview": "vite preview"
   },
   "dependencies": {
