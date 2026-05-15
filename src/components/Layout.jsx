@@ -60,8 +60,8 @@ export default function Layout({ children }) {
   const accentLight = session?.loginMode === 'solo' ? '#f0effe' : '#e6f7f2'
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <header style={{ background: '#0d47a1', borderBottom: '1px solid #0a3d91', paddingLeft: 16, paddingRight: 16, paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 8, height: 'calc(56px + env(safe-area-inset-top, 0px))', boxSizing: 'border-box', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <header style={{ background: '#0d47a1', borderBottom: '1px solid #0a3d91', paddingLeft: 16, paddingRight: 16, paddingTop: 'calc(env(safe-area-inset-top, 0px) / 2)', paddingBottom: 8, height: 'calc(56px + env(safe-area-inset-top, 0px) / 2)', boxSizing: 'border-box', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexShrink: 0, zIndex: 100 }}>
         <div onClick={() => setScreen('dashboard')} style={{ cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
           <ILabLogo size={42} />
           {!isMobile && (
@@ -102,11 +102,14 @@ export default function Layout({ children }) {
 
       <main style={{
         flex: 1,
+        minHeight: 0,
+        overflowY: 'scroll',
+        WebkitOverflowScrolling: 'touch',
         maxWidth: screen === 'booking' ? '100%' : 960,
         margin: '0 auto',
         width: '100%',
         padding: screen === 'booking' ? '16px 10px' : '24px 16px',
-        paddingBottom: isMobile ? (screen === 'booking' ? 'calc(56px + max(env(safe-area-inset-bottom, 0px), 8px) + 16px)' : 'calc(56px + max(env(safe-area-inset-bottom, 0px), 8px) + 32px)') : undefined,
+        paddingBottom: '24px',
       }}>
         {children}
       </main>
@@ -114,7 +117,8 @@ export default function Layout({ children }) {
       {/* ── Mobile bottom nav ── */}
       {isMobile && (
         <nav style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200,
+          flexShrink: 0,
+          zIndex: 200,
           background: '#fff',
           borderTop: '1px solid #e0e0e0',
           boxShadow: '0 -2px 12px rgba(0,0,0,0.07)',
