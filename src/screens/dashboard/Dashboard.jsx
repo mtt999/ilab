@@ -447,39 +447,13 @@ export default function Dashboard() {
 
   const isSuperAdmin = isAdmin && !session?.userId
 
-  // Super admin: show platform-level icon grid (no org-specific data)
+  // Super admin: just show greeting — all tools are in the Admin Panel
   if (isSuperAdmin) {
-    const superAdminCards = [
-      { key: 'admins',  icon: '👤', bg: '#fef3c7', color: '#92400e', label: 'Org Admins',   sub: 'Manage org admin accounts',    tab: 'orgadmins' },
-      { key: 'icons',   icon: '🖼️', bg: '#e8f2ee', color: '#1D9E75', label: 'Module Icons', sub: 'Upload dashboard card images', tab: 'images'    },
-      { key: 'profile', icon: '🔐', bg: '#f3eeff', color: '#7c4dbd', label: 'Profile',      sub: 'Change super admin password',  screen: 'profile'},
-    ]
-    function goTo(c) {
-      if (c.screen) { setScreen(c.screen); return }
-      setPendingAdminTab(c.tab)
-      setScreen('orgadmin')
-    }
     return (
       <div>
         <div style={{ marginBottom: 28 }}>
           <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.4px', marginBottom: 4 }}>{greeting()}, {session?.username}</div>
           <div style={{ fontSize: 13, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{dateStr} · iLab Super Admin</div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14 }}>
-          {superAdminCards.map(c => (
-            <div key={c.key} onClick={() => goTo(c)}
-              style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', cursor: 'pointer', border: '1px solid var(--border)', transition: 'all 0.15s', position: 'relative', height: 160 }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.12)' }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}>
-              <div style={{ position: 'absolute', inset: 0, background: c.bg }} />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.08) 0%, transparent 100%)' }} />
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 14px' }}>
-                <div style={{ fontSize: 28, marginBottom: 6 }}>{c.icon}</div>
-                <div style={{ fontWeight: 700, fontSize: 14, color: c.color, marginBottom: 2 }}>{c.label}</div>
-                <div style={{ fontSize: 11, color: c.color, opacity: 0.75 }}>{c.sub}</div>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     )
