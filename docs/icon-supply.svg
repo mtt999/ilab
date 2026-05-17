@@ -6,47 +6,122 @@
     </linearGradient>
   </defs>
   <rect width="400" height="240" fill="url(#bg)"/>
-  <!-- shelf unit frame -->
-  <rect x="110" y="30" width="180" height="180" rx="6" fill="rgba(255,255,255,0.04)" stroke="rgba(42,200,120,0.25)" stroke-width="1.5"/>
-  <!-- vertical divider -->
-  <rect x="200" y="30" width="2" height="180" fill="rgba(42,200,120,0.15)"/>
-  <!-- shelf line 1 -->
-  <rect x="110" y="90" width="180" height="2" fill="rgba(42,200,120,0.2)"/>
-  <!-- shelf line 2 -->
-  <rect x="110" y="150" width="180" height="2" fill="rgba(42,200,120,0.2)"/>
-  <!-- top-left: box A -->
-  <rect x="122" y="50" width="34" height="30" rx="4" fill="#2a8a5a" opacity="0.85"/>
-  <rect x="122" y="50" width="34" height="9" rx="4" fill="rgba(255,255,255,0.2)"/>
-  <rect x="136" y="50" width="4" height="9" fill="rgba(255,255,255,0.3)"/>
-  <!-- top-left: box B -->
-  <rect x="162" y="56" width="26" height="24" rx="4" fill="#1e6e47" opacity="0.8"/>
-  <!-- top-right: canister -->
-  <rect x="212" y="46" width="22" height="36" rx="5" fill="#3aaa72" opacity="0.75"/>
-  <rect x="215" y="44" width="16" height="6" rx="3" fill="rgba(255,255,255,0.3)"/>
-  <!-- top-right: small box -->
-  <rect x="242" y="58" width="32" height="24" rx="4" fill="#2a8a5a" opacity="0.7"/>
-  <rect x="242" y="58" width="32" height="8" rx="4" fill="rgba(255,255,255,0.15)"/>
-  <!-- mid-left: flask -->
-  <ellipse cx="140" cy="122" rx="14" ry="10" fill="#3aaa72" opacity="0.7"/>
-  <rect x="136" y="104" width="8" height="18" rx="2" fill="#2a8a5a" opacity="0.8"/>
-  <rect x="133" y="103" width="14" height="5" rx="2" fill="rgba(255,255,255,0.25)"/>
-  <!-- mid-left: container -->
-  <rect x="158" y="108" width="30" height="24" rx="4" fill="#1e6e47" opacity="0.8"/>
-  <rect x="161" y="116" width="24" height="3" rx="1" fill="rgba(255,255,255,0.3)"/>
-  <rect x="161" y="121" width="18" height="3" rx="1" fill="rgba(255,255,255,0.2)"/>
-  <!-- mid-right: two small boxes -->
-  <rect x="212" y="110" width="26" height="20" rx="4" fill="#3aaa72" opacity="0.75"/>
-  <rect x="244" y="114" width="28" height="16" rx="4" fill="#2a8a5a" opacity="0.8"/>
-  <!-- bottom-left: large container -->
-  <rect x="120" y="162" width="48" height="32" rx="5" fill="#2a8a5a" opacity="0.85"/>
-  <rect x="120" y="162" width="48" height="10" rx="5" fill="rgba(255,255,255,0.15)"/>
-  <rect x="138" y="162" width="6" height="10" fill="rgba(255,255,255,0.2)"/>
-  <!-- level indicator -->
-  <rect x="124" y="175" width="40" height="5" rx="2" fill="rgba(0,0,0,0.3)"/>
-  <rect x="124" y="175" width="28" height="5" rx="2" fill="#4be898" opacity="0.7"/>
-  <!-- bottom-right: boxes -->
-  <rect x="210" y="164" width="32" height="28" rx="4" fill="#1e6e47" opacity="0.8"/>
-  <rect x="248" y="168" width="24" height="24" rx="4" fill="#3aaa72" opacity="0.7"/>
-  <!-- scan line glow -->
-  <rect x="110" y="119" width="180" height="1" fill="rgba(74,232,152,0.35)"/>
+
+  <!-- shelf back wall -->
+  <rect width="400" height="240" fill="rgba(255,255,255,0.02)"/>
+
+  <!-- shelf rail top -->
+  <rect x="0" y="58" width="400" height="6" rx="2" fill="rgba(42,200,120,0.25)"/>
+  <!-- shelf rail mid -->
+  <rect x="0" y="132" width="400" height="6" rx="2" fill="rgba(42,200,120,0.25)"/>
+  <!-- shelf rail bottom -->
+  <rect x="0" y="206" width="400" height="6" rx="2" fill="rgba(42,200,120,0.25)"/>
+
+  <!-- ===== TOP SHELF (y 0–58) ===== -->
+  <!-- Big amber bottle left -->
+  <rect x="10" y="10" width="44" height="46" rx="6" fill="#c97820" opacity="0.9"/>
+  <rect x="18" y="6" width="28" height="10" rx="5" fill="#e8951a" opacity="0.85"/>
+  <rect x="10" y="22" width="44" height="8" rx="2" fill="rgba(255,255,255,0.15)"/>
+  <!-- Blue container -->
+  <rect x="62" y="14" width="52" height="42" rx="5" fill="#1a4fa8" opacity="0.88"/>
+  <rect x="62" y="14" width="52" height="12" rx="5" fill="#2660c8" opacity="0.9"/>
+  <rect x="72" y="30" width="32" height="4" rx="2" fill="rgba(255,255,255,0.35)"/>
+  <rect x="72" y="38" width="22" height="4" rx="2" fill="rgba(255,255,255,0.2)"/>
+  <!-- Green flask tall -->
+  <rect x="122" y="8" width="36" height="48" rx="5" fill="#1e8a55" opacity="0.9"/>
+  <rect x="128" y="5" width="24" height="8" rx="4" fill="#2aaa6a"/>
+  <rect x="122" y="20" width="36" height="18" rx="2" fill="rgba(255,255,255,0.12)"/>
+  <!-- White/grey box -->
+  <rect x="166" y="16" width="58" height="40" rx="5" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <rect x="174" y="26" width="42" height="5" rx="2" fill="rgba(255,255,255,0.4)"/>
+  <rect x="174" y="35" width="30" height="5" rx="2" fill="rgba(255,255,255,0.25)"/>
+  <rect x="174" y="44" width="36" height="5" rx="2" fill="rgba(255,255,255,0.2)"/>
+  <!-- Orange canister -->
+  <rect x="232" y="10" width="42" height="46" rx="6" fill="#b84a10" opacity="0.9"/>
+  <rect x="238" y="6" width="30" height="10" rx="5" fill="#d85a18" opacity="0.9"/>
+  <rect x="232" y="28" width="42" height="10" rx="2" fill="rgba(255,255,255,0.2)"/>
+  <!-- Purple bottle -->
+  <rect x="282" y="14" width="36" height="42" rx="5" fill="#5b2a8a" opacity="0.88"/>
+  <rect x="288" y="10" width="24" height="9" rx="4" fill="#7a3ab8"/>
+  <!-- Teal large box -->
+  <rect x="326" y="8" width="68" height="48" rx="6" fill="#0e7068" opacity="0.85"/>
+  <rect x="334" y="18" width="52" height="6" rx="2" fill="rgba(255,255,255,0.3)"/>
+  <rect x="334" y="28" width="38" height="6" rx="2" fill="rgba(255,255,255,0.2)"/>
+  <rect x="334" y="38" width="44" height="6" rx="2" fill="rgba(255,255,255,0.15)"/>
+
+  <!-- ===== MID SHELF (y 64–132) ===== -->
+  <!-- Red hazard container -->
+  <rect x="8" y="68" width="56" height="60" rx="6" fill="#aa2020" opacity="0.88"/>
+  <rect x="8" y="68" width="56" height="16" rx="6" fill="#cc2828" opacity="0.9"/>
+  <rect x="16" y="80" width="40" height="5" rx="2" fill="rgba(255,255,255,0.3)"/>
+  <rect x="16" y="90" width="28" height="5" rx="2" fill="rgba(255,255,255,0.2)"/>
+  <!-- level bar -->
+  <rect x="16" y="108" width="40" height="8" rx="3" fill="rgba(0,0,0,0.35)"/>
+  <rect x="16" y="108" width="26" height="8" rx="3" fill="#ee4444" opacity="0.75"/>
+  <!-- Yellow chemical drum -->
+  <rect x="72" y="70" width="48" height="58" rx="8" fill="#b8960e" opacity="0.88"/>
+  <ellipse cx="96" cy="70" rx="24" ry="8" fill="#d8b010" opacity="0.85"/>
+  <rect x="80" y="90" width="32" height="5" rx="2" fill="rgba(255,255,255,0.25)"/>
+  <rect x="80" y="100" width="22" height="5" rx="2" fill="rgba(255,255,255,0.18)"/>
+  <!-- Stacked flat boxes -->
+  <rect x="128" y="74" width="68" height="18" rx="4" fill="#1e4a8a" opacity="0.85"/>
+  <rect x="128" y="96" width="68" height="18" rx="4" fill="#254fa0" opacity="0.8"/>
+  <rect x="128" y="118" width="68" height="10" rx="4" fill="#2a54a8" opacity="0.75"/>
+  <rect x="136" y="79" width="52" height="5" rx="2" fill="rgba(255,255,255,0.25)"/>
+  <rect x="136" y="101" width="40" height="5" rx="2" fill="rgba(255,255,255,0.2)"/>
+  <!-- Cyan tall bottle -->
+  <rect x="204" y="66" width="36" height="62" rx="6" fill="#077a7a" opacity="0.9"/>
+  <rect x="210" y="62" width="24" height="10" rx="5" fill="#0a9a9a"/>
+  <rect x="204" y="84" width="36" height="22" rx="2" fill="rgba(255,255,255,0.12)"/>
+  <!-- White labelled boxes -->
+  <rect x="248" y="72" width="50" height="56" rx="5" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"/>
+  <rect x="256" y="82" width="34" height="5" rx="2" fill="rgba(255,255,255,0.4)"/>
+  <rect x="256" y="91" width="24" height="5" rx="2" fill="rgba(255,255,255,0.28)"/>
+  <rect x="256" y="100" width="30" height="5" rx="2" fill="rgba(255,255,255,0.2)"/>
+  <!-- Green large drum right -->
+  <rect x="306" y="68" width="88" height="60" rx="8" fill="#1a7a40" opacity="0.88"/>
+  <ellipse cx="350" cy="68" rx="44" ry="10" fill="#22a050" opacity="0.85"/>
+  <rect x="318" y="88" width="64" height="6" rx="2" fill="rgba(255,255,255,0.25)"/>
+  <rect x="318" y="100" width="48" height="6" rx="2" fill="rgba(255,255,255,0.18)"/>
+  <!-- level bar -->
+  <rect x="318" y="112" width="64" height="8" rx="3" fill="rgba(0,0,0,0.3)"/>
+  <rect x="318" y="112" width="44" height="8" rx="3" fill="#4be898" opacity="0.7"/>
+
+  <!-- ===== BOTTOM SHELF (y 138–206) ===== -->
+  <!-- Wide blue storage box -->
+  <rect x="6" y="142" width="80" height="60" rx="6" fill="#1a3a7a" opacity="0.88"/>
+  <rect x="6" y="142" width="80" height="18" rx="6" fill="#24508a" opacity="0.9"/>
+  <rect x="14" y="150" width="64" height="5" rx="2" fill="rgba(255,255,255,0.3)"/>
+  <rect x="14" y="168" width="52" height="5" rx="2" fill="rgba(255,255,255,0.2)"/>
+  <rect x="14" y="178" width="40" height="5" rx="2" fill="rgba(255,255,255,0.15)"/>
+  <!-- level bar -->
+  <rect x="14" y="188" width="64" height="8" rx="3" fill="rgba(0,0,0,0.3)"/>
+  <rect x="14" y="188" width="48" height="8" rx="3" fill="#4a90e8" opacity="0.7"/>
+  <!-- Orange medium box -->
+  <rect x="94" y="146" width="58" height="56" rx="6" fill="#9a4810" opacity="0.88"/>
+  <rect x="102" y="158" width="42" height="5" rx="2" fill="rgba(255,255,255,0.25)"/>
+  <rect x="102" y="168" width="32" height="5" rx="2" fill="rgba(255,255,255,0.18)"/>
+  <!-- Green bottles cluster -->
+  <rect x="160" y="150" width="28" height="52" rx="5" fill="#1a7040" opacity="0.9"/>
+  <rect x="164" y="147" width="20" height="8" rx="4" fill="#22a050"/>
+  <rect x="194" y="154" width="28" height="48" rx="5" fill="#1e8a4a" opacity="0.85"/>
+  <rect x="198" y="151" width="20" height="8" rx="4" fill="#28b458"/>
+  <!-- Wide labelled box -->
+  <rect x="230" y="142" width="72" height="60" rx="6" fill="rgba(255,255,255,0.09)" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+  <rect x="238" y="152" width="56" height="6" rx="2" fill="rgba(255,255,255,0.38)"/>
+  <rect x="238" y="163" width="42" height="6" rx="2" fill="rgba(255,255,255,0.25)"/>
+  <rect x="238" y="174" width="50" height="6" rx="2" fill="rgba(255,255,255,0.18)"/>
+  <rect x="238" y="185" width="34" height="6" rx="2" fill="rgba(255,255,255,0.14)"/>
+  <!-- Red tall canister right -->
+  <rect x="310" y="140" width="40" height="64" rx="7" fill="#8a1818" opacity="0.88"/>
+  <rect x="316" y="136" width="28" height="10" rx="5" fill="#aa2020"/>
+  <rect x="310" y="162" width="40" height="16" rx="2" fill="rgba(255,255,255,0.12)"/>
+  <!-- Teal right box -->
+  <rect x="358" y="144" width="40" height="60" rx="6" fill="#0e6a68" opacity="0.88"/>
+  <rect x="364" y="155" width="28" height="5" rx="2" fill="rgba(255,255,255,0.28)"/>
+  <rect x="364" y="165" width="20" height="5" rx="2" fill="rgba(255,255,255,0.2)"/>
+  <rect x="364" y="175" width="24" height="5" rx="2" fill="rgba(255,255,255,0.15)"/>
+
+  <!-- scan highlight line -->
+  <rect x="0" y="131" width="400" height="1.5" fill="rgba(74,232,152,0.4)"/>
 </svg>
