@@ -76,7 +76,7 @@ function ModuleCard({ m, onClick, imgUrl, isAdminManage }) {
       href="#"
       onClick={e => { e.preventDefault(); onClick?.() }}
       onTouchEnd={e => { e.preventDefault(); onClick?.() }}
-      style={{ display: 'block', borderRadius: 'var(--radius-lg)', overflow: 'hidden', cursor: 'pointer', border: isAdminManage ? '1px dashed var(--border)' : '1px solid var(--border)', transition: 'box-shadow 0.15s', position: 'relative', height: 160, touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', userSelect: 'none', WebkitUserSelect: 'none', textDecoration: 'none' }}
+      style={{ display: 'block', borderRadius: 'var(--radius-lg)', overflow: 'hidden', cursor: 'pointer', border: isAdminManage ? '1px dashed var(--border)' : '1px solid var(--border)', transition: 'box-shadow 0.15s', position: 'relative', height: 160, touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', userSelect: 'none', WebkitUserSelect: 'none', textDecoration: 'none', transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
       onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.12)' }}
       onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none' }}>
       <div style={{ position: 'absolute', inset: 0, background: m.bg, pointerEvents: 'none' }} />
