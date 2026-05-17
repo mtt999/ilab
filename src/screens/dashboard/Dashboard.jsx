@@ -33,13 +33,13 @@ function getAllModulesForStudent() {
     { key: 'equipment',    screen: 'equipment',     label: 'Equipment Inventory',       sub: 'Lab equipment tracking',           icon: '🔧', bg: '#fef3c7', color: '#92400e', locked: true },
     { key: 'equipmenthub', screen: 'equipmenthub',  label: 'Equipment',                 sub: 'Info, SOP & standards',            icon: '📚', bg: '#e8f2ee', color: '#1e4d39' },
     { key: 'booking',      screen: 'booking',       label: 'Booking Equipment',         sub: 'Reserve lab equipment',            icon: '📅', bg: '#e0f2fe', color: '#0369a1' },
-    { key: 'barcode',      screen: 'barcode',       label: 'Barcode Scanner',           sub: 'Scan & look up lab materials',     icon: '📷', bg: '#e0f7fa', color: '#00796b' },
+    { key: 'barcode',      screen: 'barcode',       label: 'QR Scan',                   sub: 'Scan & look up lab materials',     icon: '📷', bg: '#e0f7fa', color: '#00796b' },
     { key: 'mileage',      screen: null,            label: 'Mileage Form',              sub: 'Submit mileage reimbursement',     icon: '🚗', bg: '#fdf0ed', color: '#c84b2f', external: true },
     { key: 'labsafety',    screen: null,            label: 'Lab Safety',                sub: 'Safety training & certification',  icon: '🦺', bg: '#fef3c7', color: '#92400e', external: true },
     { key: 'remessages',   screen: 'remessages',    label: 'Contact Lab Manager (REs)', sub: 'Notes, ideas & issue reports',     icon: '💬', bg: '#e8f2ee', color: '#2a6049' },
     { key: 'pm',           screen: 'pm',            label: 'Project Management',        sub: 'Tasks, meetings & team chat',      icon: '📋', bg: '#fff3e0', color: '#ff6b00', locked: true },
     { key: 'profile',      screen: 'profile',       label: 'Profile',                   sub: 'Your info & settings',             icon: '👤', bg: '#f3eeff', color: '#7c4dbd' },
-    { key: 'barcodeqr',   screen: 'barcodeqr',     label: 'Barcode/QR Scan',           sub: 'Equipment QR code management',     icon: '🔲', bg: '#f0f4ff', color: '#1a56db', locked: true },
+    { key: 'barcodeqr',   screen: 'barcodeqr',     label: 'QR Scan',                   sub: 'Equipment QR code management',     icon: '🔲', bg: '#f0f4ff', color: '#1a56db', locked: true },
   ]
 }
 
@@ -71,24 +71,25 @@ function ExternalLinkModal({ url, onConfirm, onCancel }) {
 }
 
 function ModuleCard({ m, onClick, imgUrl, isAdminManage }) {
-  const [imgErr, setImgErr] = useState(false)
-  const hasImg = !!(imgUrl && !imgErr)
   return (
-    <div onClick={onClick}
-      style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', cursor: 'pointer', border: isAdminManage ? '1px dashed var(--border)' : '1px solid var(--border)', transition: 'all 0.15s', position: 'relative', height: 160 }}
-      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.12)' }}
-      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}>
+    <a
+      href="#"
+      onClick={e => { e.preventDefault(); onClick?.() }}
+      onTouchEnd={e => { e.preventDefault(); onClick?.() }}
+      style={{ display: 'block', borderRadius: 'var(--radius-lg)', overflow: 'hidden', cursor: 'pointer', border: isAdminManage ? '1px dashed var(--border)' : '1px solid var(--border)', transition: 'box-shadow 0.15s', position: 'relative', height: 160, touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', userSelect: 'none', WebkitUserSelect: 'none', textDecoration: 'none' }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.12)' }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none' }}>
       <div style={{ position: 'absolute', inset: 0, background: m.bg, pointerEvents: 'none' }} />
-      {imgUrl && !imgErr && <img src={imgUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', padding: 16, pointerEvents: 'none' }} onError={() => setImgErr(true)} />}
-      <div style={{ position: 'absolute', inset: 0, background: hasImg ? 'linear-gradient(to top, rgba(0,0,0,0.85) 35%, rgba(0,0,0,0.15) 100%)' : 'linear-gradient(to top, rgba(0,0,0,0.15) 0%, transparent 100%)', pointerEvents: 'none' }} />
+      {imgUrl && <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${imgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', pointerEvents: 'none' }} />}
+      <div style={{ position: 'absolute', inset: 0, background: imgUrl ? 'linear-gradient(to top, rgba(0,0,0,0.85) 35%, rgba(0,0,0,0.15) 100%)' : 'linear-gradient(to top, rgba(0,0,0,0.15) 0%, transparent 100%)', pointerEvents: 'none' }} />
       {m.external && <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: 10, borderRadius: 4, padding: '2px 6px', pointerEvents: 'none' }}>↗ External</div>}
       {isAdminManage && <div style={{ position: 'absolute', top: 10, right: 10, background: m.color, color: '#fff', fontSize: 10, borderRadius: 4, padding: '2px 8px', fontWeight: 600, pointerEvents: 'none' }}>⚙ Edit</div>}
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 14px', pointerEvents: 'none' }}>
-        {!hasImg && <div style={{ fontSize: 28, marginBottom: 6 }}>{m.icon}</div>}
-        <div style={{ fontWeight: 700, fontSize: 14, color: hasImg ? '#fff' : m.color, textShadow: hasImg ? '0 2px 6px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.8)' : 'none', marginBottom: 2 }}>{m.label}</div>
-        <div style={{ fontSize: 11, color: hasImg ? 'rgba(255,255,255,0.9)' : m.color, opacity: hasImg ? 1 : 0.75, textShadow: hasImg ? '0 1px 4px rgba(0,0,0,0.8)' : 'none' }}>{isAdminManage ? 'Click to manage link' : m.sub}</div>
+        {!imgUrl && <div style={{ fontSize: 28, marginBottom: 6 }}>{m.icon}</div>}
+        <div style={{ fontWeight: 700, fontSize: 14, color: imgUrl ? '#fff' : m.color, textShadow: imgUrl ? '0 2px 6px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.8)' : 'none', marginBottom: 2 }}>{m.label}</div>
+        <div style={{ fontSize: 11, color: imgUrl ? 'rgba(255,255,255,0.9)' : m.color, opacity: imgUrl ? 1 : 0.75, textShadow: imgUrl ? '0 1px 4px rgba(0,0,0,0.8)' : 'none' }}>{isAdminManage ? 'Click to manage link' : m.sub}</div>
       </div>
-    </div>
+    </a>
   )
 }
 
@@ -150,6 +151,12 @@ function StudentDashboardView({ session, onNavigate, mileageUrl, moduleImages, a
   const [data, setData] = useState({ myProjects: 0, trainingsComplete: 0, trainingsTotal: 4, upcomingBookings: [], pendingCert: false })
   const [loading, setLoading] = useState(true)
   const [confirmExternal, setConfirmExternal] = useState(null)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640)
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 640)
+    window.addEventListener('resize', fn)
+    return () => window.removeEventListener('resize', fn)
+  }, [])
   useEffect(() => { if (session?.userId) loadStudentData() }, [session?.userId])
   async function loadStudentData() {
     setLoading(true)
@@ -180,6 +187,7 @@ function StudentDashboardView({ session, onNavigate, mileageUrl, moduleImages, a
     { key:'training',    icon:'🎓', label:'Training Records',     sub:'Check your certs',               screen:'training',    color:'#0369a1' },
     { key:'booking',     icon:'📅', label:'Book Equipment',       sub:'Reserve lab equipment',          screen:'booking',     color:'#0369a1' },
     { key:'equipmenthub',icon:'📚', label:'Equipment Info',       sub:'SOPs & standards',               screen:'equipmenthub',color:'#1e4d39' },
+    { key:'barcode',     icon:'📷', label:'QR Scan',               sub:'Scan lab materials',             screen:'barcode',     color:'#00796b' },
     { key:'remessages',  icon:'💬', label:'Contact Lab Manager',  sub:'Ask REs a question',             screen:'remessages',  color:'#2a6049' },
     { key:'mileage',     icon:'🚗', label:'Mileage Form',         sub:'Submit reimbursement',           screen:null,          color:'#c84b2f', external:true },
   ]
@@ -188,15 +196,15 @@ function StudentDashboardView({ session, onNavigate, mileageUrl, moduleImages, a
     : allQuickLinks
   return (
     <>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 260px', gap:20, alignItems:'start' }}>
+      <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 260px', gap:20, alignItems:'start' }}>
         <div>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12, marginBottom:20 }}>
             {[{label:'My active projects',val:data.myProjects,color:'#7c4dbd',screen:'projects'},{label:'Trainings complete',val:`${data.trainingsComplete}/${data.trainingsTotal}`,color:trainingColor,screen:'training'},{label:'Upcoming bookings',val:data.upcomingBookings.length,color:'#0369a1',screen:'booking'},{label:data.pendingCert?'Cert pending approval':'Cert up to date',val:loading?'—':data.pendingCert?'⏳':'✅',color:data.pendingCert?'#c84b2f':'#2a6049',screen:'training'}]
               .map((s,i) => (
-                <div key={i} onClick={()=>onNavigate(s.screen)} style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'18px 20px', cursor:'pointer', transition:'all 0.15s' }} onMouseEnter={e=>e.currentTarget.style.borderColor=s.color} onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}>
+                <a key={i} href="#" onClick={e=>{e.preventDefault();onNavigate(s.screen)}} onTouchEnd={e=>{e.preventDefault();onNavigate(s.screen)}} style={{ display:'block', background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'18px 20px', cursor:'pointer', transition:'all 0.15s', touchAction:'manipulation', WebkitTapHighlightColor:'transparent', textDecoration:'none' }} onMouseEnter={e=>e.currentTarget.style.borderColor=s.color} onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}>
                   <div style={{ fontSize:28, fontWeight:600, color:s.color, marginBottom:4 }}>{loading?'—':s.val}</div>
                   <div style={{ fontSize:13, color:'var(--text2)' }}>{s.label}</div>
-                </div>
+                </a>
               ))
             }
           </div>
@@ -204,10 +212,13 @@ function StudentDashboardView({ session, onNavigate, mileageUrl, moduleImages, a
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
           <div style={{ fontSize:12, fontWeight:500, color:'var(--text3)', fontFamily:'var(--mono)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:6 }}>Quick access</div>
           {quickLinks.map(m => (
-            <div key={m.key} onClick={()=>m.external?setConfirmExternal({url:mileageUrl}):onNavigate(m.screen)}
-              style={{ borderRadius:'var(--radius-lg)', overflow:'hidden', cursor:'pointer', height:56, position:'relative', border:'1px solid var(--border)', transition:'all 0.15s' }}
+            <a key={m.key} href="#" onClick={e=>{e.preventDefault();m.external?setConfirmExternal({url:mileageUrl}):onNavigate(m.screen)}} onTouchEnd={e=>{e.preventDefault();m.external?setConfirmExternal({url:mileageUrl}):onNavigate(m.screen)}}
+              style={{ display:'block', borderRadius:'var(--radius-lg)', overflow:'hidden', cursor:'pointer', height:56, position:'relative', border:'1px solid var(--border)', transition:'all 0.15s', touchAction:'manipulation', WebkitTapHighlightColor:'transparent', textDecoration:'none' }}
               onMouseEnter={e=>e.currentTarget.style.borderColor=m.color} onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}>
-              {moduleImages[m.key]?(<><img src={moduleImages[m.key]} alt="" style={{ position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',pointerEvents:'none' }} /><div style={{ position:'absolute',inset:0,background:'linear-gradient(to right,rgba(0,0,0,0.65) 0%,rgba(0,0,0,0.2) 100%)',pointerEvents:'none' }} /></>):<div style={{ position:'absolute',inset:0,background:`${m.color}18`,pointerEvents:'none' }} />}
+              {moduleImages[m.key]
+                ? <div style={{ position:'absolute',inset:0,backgroundImage:`url(${moduleImages[m.key]})`,backgroundSize:'cover',backgroundPosition:'center',pointerEvents:'none' }} />
+                : <div style={{ position:'absolute',inset:0,background:`${m.color}18`,pointerEvents:'none' }} />}
+              {moduleImages[m.key] && <div style={{ position:'absolute',inset:0,background:'linear-gradient(to right,rgba(0,0,0,0.65) 0%,rgba(0,0,0,0.2) 100%)',pointerEvents:'none' }} />}
               <div style={{ position:'absolute',inset:0,display:'flex',alignItems:'center',gap:12,padding:'0 14px',pointerEvents:'none' }}>
                 <span style={{ fontSize:18,flexShrink:0 }}>{m.icon}</span>
                 <div style={{ flex:1,minWidth:0 }}>
@@ -216,7 +227,7 @@ function StudentDashboardView({ session, onNavigate, mileageUrl, moduleImages, a
                 </div>
                 {m.external&&<span style={{ fontSize:10,color:'var(--text3)',flexShrink:0 }}>↗</span>}
               </div>
-            </div>
+            </a>
           ))}
         </div>
       </div>
@@ -257,10 +268,10 @@ function DashboardView({ modules, onNavigate, mileageUrl, labSafetyUrl, moduleIm
               { label:'Pending cert approvals', value:stats.pendingTraining, color:'#c84b2f', screen:'training' },
               { label:'Supply items tracked',   value:stats.lowSupplies,     color:'#2a6049', screen:'home'     },
             ].map(s => (
-              <div key={s.label} onClick={()=>onNavigate(s.screen)} style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'18px 20px', cursor:'pointer', transition:'all 0.15s' }} onMouseEnter={e=>e.currentTarget.style.borderColor=s.color} onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}>
+              <a key={s.label} href="#" onClick={e=>{e.preventDefault();onNavigate(s.screen)}} onTouchEnd={e=>{e.preventDefault();onNavigate(s.screen)}} style={{ display:'block', background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'18px 20px', cursor:'pointer', transition:'all 0.15s', touchAction:'manipulation', WebkitTapHighlightColor:'transparent', textDecoration:'none' }} onMouseEnter={e=>e.currentTarget.style.borderColor=s.color} onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}>
                 <div style={{ fontSize:28, fontWeight:600, color:s.color, marginBottom:4 }}>{loading?'—':s.value}</div>
                 <div style={{ fontSize:13, color:'var(--text2)' }}>{s.label}</div>
-              </div>
+              </a>
             ))}
           </div>
           <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'18px 20px' }}>
@@ -278,10 +289,13 @@ function DashboardView({ modules, onNavigate, mileageUrl, labSafetyUrl, moduleIm
         <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
           <div style={{ fontSize:12,fontWeight:500,color:'var(--text3)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6 }}>Quick access</div>
           {modules.map(m=>(
-            <div key={m.key} onClick={()=>m.external?setConfirmExternal({url:m.key==='mileage'?mileageUrl:labSafetyUrl}):onNavigate(m.screen)}
-              style={{ borderRadius:'var(--radius-lg)',overflow:'hidden',cursor:'pointer',height:56,position:'relative',border:'1px solid var(--border)',transition:'all 0.15s' }}
+            <a key={m.key} href="#" onClick={e=>{e.preventDefault();m.external?setConfirmExternal({url:m.key==='mileage'?mileageUrl:labSafetyUrl}):onNavigate(m.screen)}} onTouchEnd={e=>{e.preventDefault();m.external?setConfirmExternal({url:m.key==='mileage'?mileageUrl:labSafetyUrl}):onNavigate(m.screen)}}
+              style={{ display:'block',borderRadius:'var(--radius-lg)',overflow:'hidden',cursor:'pointer',height:56,position:'relative',border:'1px solid var(--border)',transition:'all 0.15s',touchAction:'manipulation',WebkitTapHighlightColor:'transparent',textDecoration:'none' }}
               onMouseEnter={e=>e.currentTarget.style.borderColor=m.color} onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}>
-              {moduleImages[m.key]?(<><img src={moduleImages[m.key]} alt="" style={{ position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',pointerEvents:'none' }} /><div style={{ position:'absolute',inset:0,background:'linear-gradient(to right,rgba(0,0,0,0.65) 0%,rgba(0,0,0,0.2) 100%)',pointerEvents:'none' }} /></>):<div style={{ position:'absolute',inset:0,background:m.bg,pointerEvents:'none' }} />}
+              {moduleImages[m.key]
+                ? <div style={{ position:'absolute',inset:0,backgroundImage:`url(${moduleImages[m.key]})`,backgroundSize:'cover',backgroundPosition:'center',pointerEvents:'none' }} />
+                : <div style={{ position:'absolute',inset:0,background:m.bg,pointerEvents:'none' }} />}
+              {moduleImages[m.key] && <div style={{ position:'absolute',inset:0,background:'linear-gradient(to right,rgba(0,0,0,0.65) 0%,rgba(0,0,0,0.2) 100%)',pointerEvents:'none' }} />}
               <div style={{ position:'absolute',inset:0,display:'flex',alignItems:'center',gap:12,padding:'0 14px',pointerEvents:'none' }}>
                 {!moduleImages[m.key]&&<span style={{ fontSize:18,flexShrink:0 }}>{m.icon}</span>}
                 <div style={{ flex:1,minWidth:0 }}>
@@ -290,7 +304,7 @@ function DashboardView({ modules, onNavigate, mileageUrl, labSafetyUrl, moduleIm
                 </div>
                 {m.external&&<span style={{ fontSize:10,color:moduleImages[m.key]?'rgba(255,255,255,0.7)':'var(--text3)',flexShrink:0 }}>↗</span>}
               </div>
-            </div>
+            </a>
           ))}
         </div>
       </div>
@@ -310,6 +324,7 @@ export default function Dashboard() {
   const [userAccess, setUserAccess] = useState(null)
   const [studentAllowedPool, setStudentAllowedPool] = useState(null)
   const [moduleImages, setModuleImages] = useState({})
+  const [orgName, setOrgName] = useState('')
 
   const isAdmin   = session?.role === 'admin'
   const isStudent = session?.role === 'student'
@@ -400,18 +415,20 @@ export default function Dashboard() {
     return base
   })()
   // Screens not managed by user_screen_access (always allowed if in activeModules)
-  const UNMANAGED_SCREENS = new Set(['profile', 'dashboard', 'pm', 'barcode', 'barcodeqr', 'orgadmin'])
+  const UNMANAGED_SCREENS = new Set(['profile', 'dashboard', 'pm', 'barcode', 'barcodeqr', 'orgadmin', 'home', 'equipment'])
   const modules = userAccess
     ? allModules.filter(m => m.external || !m.screen || UNMANAGED_SCREENS.has(m.screen) || userAccess.has(m.screen))
     : allModules
 
   useEffect(() => { loadSettings() }, [session?.userId])
   async function loadSettings() {
+    const base = import.meta.env.BASE_URL
     const imgs = {
-      pm:        '/ilab/icon-pm.svg',
-      barcode:   '/ilab/icon-barcode.svg',
-      barcodeqr: '/ilab/icon-barcodeqr.svg',
-      profile:   '/ilab/icon-profile.svg',
+      pm:        `${base}icon-pm.svg`,
+      barcode:   `${base}icon-barcode.svg`,
+      barcodeqr: `${base}icon-barcodeqr.svg`,
+      profile:   `${base}icon-profile.svg`,
+      supply:    `${base}icon-supply.svg`,
     }
 
     const imgPrefix = isSolo ? 'solo_img_' : 'img_'
@@ -431,9 +448,10 @@ export default function Dashboard() {
       if (r.value) imgs[moduleKey] = r.value
     })
 
-    // Override with per-org images for team users (org images take priority over global)
+    // Override with per-org images and fetch org name for team users
     if (session?.organizationId && !isSolo) {
-      const { data: orgData } = await sb.from('organizations').select('module_images').eq('id', session.organizationId).maybeSingle()
+      const { data: orgData } = await sb.from('organizations').select('name, module_images').eq('id', session.organizationId).maybeSingle()
+      if (orgData?.name) setOrgName(orgData.name)
       Object.assign(imgs, orgData?.module_images || {})
     }
 
@@ -495,7 +513,7 @@ export default function Dashboard() {
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:28, flexWrap:'wrap', gap:12 }}>
         <div>
           <div style={{ fontSize:22, fontWeight:600, letterSpacing:'-0.4px', marginBottom:4 }}>{greeting()}, {session?.username}</div>
-          <div style={{ fontSize:13, color:'var(--text3)', fontFamily:'var(--mono)' }}>{dateStr} · ICT Lab</div>
+          <div style={{ fontSize:13, color:'var(--text3)', fontFamily:'var(--mono)' }}>{dateStr}{orgName ? ` · iLab for ${orgName}` : ''}</div>
         </div>
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
           {!isStudent && (
